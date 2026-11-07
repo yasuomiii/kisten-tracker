@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kisten-Tracker</title>
+<meta name="description" content="Zählt geöffnete Truhen, Gizmos und Pirate Shop Token pro Runde - lokal im Browser.">
+<style>
+  :root{
+    --bg:#0b0e1c; --card:rgba(26,31,58,.86); --card2:#222850; --line:rgba(120,132,200,.22);
+    --text:#f1f3ff; --muted:#8c93b8; --gold:#ffc83d; --gold2:#ff9a1f;
+    --green:#3ddc97; --blue:#5ab0ff; --red:#ff6b7a; --violet:#b48cff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{
+    min-height:100vh;padding:16px 14px 48px;overflow-x:hidden;
+    background:
+      radial-gradient(520px 320px at 85% -5%, rgba(255,200,61,.14), transparent 70%),
+      radial-gradient(480px 360px at -10% 30%, rgba(90,176,255,.12), transparent 70%),
+      radial-gradient(480px 360px at 110% 85%, rgba(180,140,255,.12), transparent 70%),
+      var(--bg);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:520px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+  h1{font-size:19px;margin:0;font-weight:800;letter-spacing:.01em}
+  h1 span{color:var(--gold)}
+  .status{font-size:12px;font-weight:600;color:var(--muted);padding:5px 10px;border-radius:99px;
+    background:rgba(255,255,255,.05);transition:color .3s}
+  .status.ok{color:var(--green)} .status.warn{color:var(--gold2)}
+
+  .view{display:none}
+  .view.on{display:block;animation:viewIn .4s cubic-bezier(.2,.8,.2,1)}
+  @keyframes viewIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.28);margin-bottom:14px}
+  .hero{text-align:center;padding-top:22px;
+    background:linear-gradient(165deg,rgba(60,68,130,.75),rgba(24,28,54,.9))}
+  .hero .label{color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin-top:6px}
+  .hero .big{font-size:78px;font-weight:900;line-height:1.02;font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,#ffe38a,var(--gold2));-webkit-background-clip:text;background-clip:text;
+    color:transparent}
+  .chance{margin-top:12px;font-size:13px;color:var(--muted)}
+  .chance b{color:var(--blue);font-size:15px}
+  .float{animation:bob 3.4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+  .mini{background:rgba(255,255,255,.05);border-radius:14px;padding:11px 4px}
+  .mini b{display:block;font-size:23px;font-variant-numeric:tabular-nums}
+  .mini span{font-size:11px;color:var(--muted)}
+
+  button{font:inherit;color:inherit;border:0;cursor:pointer;border-radius:16px;touch-action:manipulation;
+    transition:transform .12s ease, filter .2s ease, box-shadow .2s ease;position:relative;overflow:hidden}
+  button:active{transform:scale(.95)}
+  .cta{width:100%;padding:20px;font-size:20px;font-weight:800;letter-spacing:.01em;margin-bottom:14px;
+    background:linear-gradient(135deg,var(--gold),var(--gold2));color:#2b1b00;
+    box-shadow:0 8px 24px rgba(255,154,31,.35)}
+  .cta::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);
+    transform:skewX(-20deg);animation:shine 3.2s ease-in-out infinite}
+  @keyframes shine{0%,55%{left:-60%}100%{left:130%}}
+  .cta.green{background:linear-gradient(135deg,#55f0b0,var(--green));color:#032a1a;box-shadow:0 8px 24px rgba(61,220,151,.3)}
+
+  .kv{display:flex;justify-content:space-between;align-items:center;padding:10px 0;
+    border-bottom:1px solid var(--line);font-size:15px}
+  .kv:last-child{border-bottom:0}
+  .kv b{font-variant-numeric:tabular-nums;font-size:17px}
+  .c-gold{color:var(--gold)} .c-blue{color:var(--blue)} .c-violet{color:var(--violet)} .c-green{color:var(--green)}
+
+  details{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:0 18px;margin-bottom:14px}
+  summary{cursor:pointer;padding:16px 0;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"▾";color:var(--muted);transition:transform .25s}
+  details[open] summary::after{transform:rotate(180deg)}
+  .list{padding-bottom:12px}
+  .item{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+  .item.new{animation:itemIn .5s ease}
+  @keyframes itemIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+  .item .n{width:34px;color:var(--muted);font-weight:700}
+  .item .d{flex:1;display:flex;gap:6px 12px;flex-wrap:wrap;align-items:baseline}
+  .item .d span{white-space:nowrap}
+  .item .when{font-size:11px;color:var(--muted)}
+  .del{background:transparent;color:var(--muted);font-size:17px;padding:4px 10px;border-radius:10px}
+  .del.arm{color:var(--red);font-size:12px;font-weight:800}
+  .item{flex-wrap:wrap}
+  .editbtn{background:rgba(255,255,255,.07);color:var(--text);font-size:12px;font-weight:700;padding:7px 11px;border-radius:10px}
+  .editbtn.on{background:var(--green);color:#032a1a}
+  .editbox{flex-basis:100%;background:rgba(255,255,255,.04);border-radius:14px;padding:6px 12px;margin-top:4px;animation:itemIn .3s ease}
+  .step{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
+  .step .sb{display:flex;align-items:center;gap:10px}
+  .step .sb b{min-width:34px;text-align:center;font-size:20px;font-variant-numeric:tabular-nums}
+  .step .sb button{width:40px;height:40px;font-size:20px;font-weight:800;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:12px}
+  .code{width:100%;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px;
+    font:11px/1.4 ui-monospace,Menlo,Consolas,monospace;word-break:break-all;resize:vertical;margin-bottom:8px}
+  .nudge{display:none;border-color:rgba(255,200,61,.4);font-size:14px;line-height:1.45}
+  .nudge .btnrow{padding:10px 0 0}
+  .msg-bad{color:var(--red)!important} .msg-ok{color:var(--green)!important}
+  .nameIn{width:100%;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font:16px system-ui,sans-serif;margin-bottom:8px}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:6px}
+  .empty{color:var(--muted);font-size:14px;padding:2px 0 12px}
+  .setrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;font-size:14px}
+  .setrow input{width:104px;font:inherit;background:var(--card2);color:var(--text);border:1px solid var(--line);
+    border-radius:12px;padding:9px 12px;text-align:right}
+  .hint{color:var(--muted);font-size:12px;padding-bottom:10px;line-height:1.45}
+
+  /* ---------- round view ---------- */
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .pill{font-weight:800;font-size:15px;padding:8px 14px;border-radius:99px;
+    background:rgba(255,200,61,.14);color:var(--gold);display:flex;align-items:center;gap:8px}
+  .pill i{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(61,220,151,.7)}100%{box-shadow:0 0 0 10px rgba(61,220,151,0)}}
+  .ghost{background:transparent;color:var(--muted);font-size:13px;padding:8px 12px;border-radius:12px}
+  .ghost.arm{color:var(--red);font-weight:800}
+
+  .trio{display:grid;grid-template-columns:1fr 1.55fr 1fr;gap:9px;align-items:stretch}
+  .tile{position:relative;overflow:visible;background:var(--card);border:1px solid var(--line);border-radius:22px;
+    padding:14px 8px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;
+    user-select:none;-webkit-user-select:none;box-shadow:0 10px 26px rgba(0,0,0,.3);transition:box-shadow .3s,border-color .3s}
+  .tile.flash{animation:flash .45s ease}
+  @keyframes flash{0%{box-shadow:0 0 0 0 var(--glow, rgba(255,200,61,.6))}100%{box-shadow:0 0 0 18px transparent}}
+  .tile .ico{width:44px;height:44px;margin-bottom:2px}
+  .tile .val{font-size:40px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;margin:2px 0}
+  .tile .lbl{font-size:11px;color:var(--muted);line-height:1.25;min-height:28px;display:flex;align-items:center;justify-content:center}
+  .tile .add{width:100%;margin-top:8px;padding:13px 0;font-size:24px;font-weight:900}
+  .tile .sub{margin-top:6px;background:rgba(255,255,255,.06);color:var(--muted);width:100%;padding:7px 0;font-size:17px;border-radius:12px}
+  .tile.g{--glow:rgba(90,176,255,.6)} .tile.g .val{color:var(--blue)}
+  .tile.g .add{background:linear-gradient(135deg,#8ac8ff,var(--blue));color:#06233f;box-shadow:0 6px 16px rgba(90,176,255,.3)}
+  .tile.t{--glow:rgba(180,140,255,.6)} .tile.t .val{color:var(--violet)}
+  .tile.t .add{background:linear-gradient(135deg,#d0b4ff,var(--violet));color:#20093f;box-shadow:0 6px 16px rgba(180,140,255,.3)}
+  .tile.c{cursor:pointer;padding-top:12px;
+    background:linear-gradient(170deg,rgba(80,70,140,.8),rgba(30,34,66,.92));border-color:rgba(255,200,61,.35)}
+  .tile.c .ico{width:104px;height:88px}
+  .tile.c .val{font-size:68px;font-weight:900;color:var(--gold)}
+  .tile.c .add{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#2b1b00;box-shadow:0 6px 18px rgba(255,154,31,.35);font-size:20px}
+  .runtotal{text-align:center;color:var(--muted);font-size:13px;margin:16px 0 16px}
+  .runtotal b{color:var(--text);font-size:15px}
+
+  .pop{animation:pop .32s cubic-bezier(.3,1.8,.5,1)}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.32)}100%{transform:scale(1)}}
+  .shake{animation:shake .25s}
+  @keyframes shake{0%,100%{transform:translateX(0)}30%{transform:translateX(-3px)}70%{transform:translateX(3px)}}
+
+  /* chest svg */
+  .chest .lid{transform-origin:14px 46px;transition:transform .16s ease-out}
+  .chest.open .lid{transform:rotate(-26deg)}
+  .chest .glow{opacity:0;transition:opacity .16s}
+  .chest.open .glow{opacity:1}
+  .gear.spin{animation:spin .55s ease}
+  @keyframes spin{to{transform:rotate(180deg)}}
+  .coin.flip{animation:flip .6s ease}
+  @keyframes flip{to{transform:rotateY(360deg)}}
+  .coin,.gear{transform-origin:center;transform-box:fill-box}
+
+  .floater{position:absolute;z-index:5;pointer-events:none;font-weight:900;font-size:22px;
+    transform:translate(-50%,0);animation:floatUp .85s ease-out forwards;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+  @keyframes floatUp{0%{opacity:1;transform:translate(-50%,0) scale(.7)}25%{transform:translate(-50%,-18px) scale(1.25)}
+    100%{opacity:0;transform:translate(-50%,-78px) scale(1)}}
+  .spark{position:absolute;z-index:4;width:7px;height:7px;border-radius:50%;pointer-events:none;
+    animation:spark .6s ease-out forwards}
+  @keyframes spark{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+    100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.2)}}
+
+  /* ---------- result ---------- */
+  .resTitle{text-align:center;margin:6px 0 16px}
+  .resTitle h2{margin:8px 0 2px;font-size:26px;font-weight:900}
+  .resTitle p{margin:0;color:var(--muted);font-size:14px}
+  .tiles3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px}
+  .rt{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 4px;text-align:center;
+    animation:rtIn .6s cubic-bezier(.2,1.2,.4,1) both}
+  .rt:nth-child(2){animation-delay:.1s} .rt:nth-child(3){animation-delay:.2s}
+  @keyframes rtIn{from{opacity:0;transform:translateY(24px) scale(.85)}to{opacity:1;transform:none}}
+  .rt b{display:block;font-size:34px;font-weight:900;font-variant-numeric:tabular-nums}
+  .rt span{font-size:11px;color:var(--muted)}
+  .sect{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:2px 0 4px}
+  .bigtotal{text-align:center;padding:6px 0 10px}
+  .bigtotal b{font-size:60px;font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1.05;display:block}
+  .bigtotal span{font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+
+  #confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:60}
+  .conf{position:absolute;top:-16px;width:9px;height:14px;border-radius:2px;
+    animation:fall var(--dur) cubic-bezier(.3,.6,.5,1) var(--delay) forwards}
+  @keyframes fall{0%{transform:translate(0,0) rotate(0);opacity:1}
+    100%{transform:translate(var(--x),105vh) rotate(var(--r));opacity:.9}}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  }
+</style>
+</head>
+<body>
+<div id="confetti"></div>
+<div id="errBox" style="display:none;position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#ff6b7a;color:#2a0006;font:600 13px system-ui;padding:10px 12px;border-radius:12px"></div>
+<div class="wrap">
+  <header><h1>Kisten<span>-Tracker</span></h1><span id="status" class="status"></span></header>
+
+  <!-- ================= HOME ================= -->
+  <section id="home" class="view">
+    <div class="card hero">
+      <div class="float" id="heroChest"></div>
+      <div class="label">Kisten insgesamt geöffnet</div>
+      <div class="big" id="hTotal">0</div>
+      <div class="grid3">
+        <div class="mini"><b class="c-blue" id="hG">0</b><span>Gizmos</span></div>
+        <div class="mini"><b class="c-violet" id="hT">0</b><span>Pirate Shop Token</span></div>
+        <div class="mini"><b id="hN">0</b><span>Runden</span></div>
+      </div>
+      <div class="chance">🎯 Gizmo-Chance pro Kiste: <b id="hChance">0,00</b> %</div>
+    </div>
+
+    <button class="cta" data-act="start">▶&nbsp; Runde starten</button>
+
+    <div class="card">
+      <div class="sect">Durchschnitt pro Runde</div>
+      <div class="kv"><span>Kisten</span><b class="c-gold" id="hAvgC">0,0</b></div>
+      <div class="kv"><span>Gizmos</span><b class="c-blue" id="hAvgG">0,0</b></div>
+      <div class="kv"><span>Pirate Shop Token</span><b class="c-violet" id="hAvgT">0,0</b></div>
+    </div>
+
+    <div class="card nudge" id="nudge">
+      <div>💾 <span id="nudgeTxt"></span></div>
+      <div class="btnrow"><button class="editbtn on" data-act="nudgeGo">Jetzt sichern</button><button class="editbtn" data-act="nudgeLater">Später</button></div>
+    </div>
+
+    <details id="hist">
+      <summary><span>Runden (<span id="hCount">0</span>)</span></summary>
+      <div class="list" id="hList"></div>
+    </details>
+
+    <details id="settings">
+      <summary>Startwerte &amp; Sicherung</summary>
+      <div class="list">
+        <div class="hint">Was du schon vor dem Tracking hattest. Wird zur Gesamtzahl addiert.</div>
+        <div class="setrow"><span>Kisten</span><input type="number" inputmode="numeric" min="0" data-base="chests"></div>
+        <div class="setrow"><span>Gizmos</span><input type="number" inputmode="numeric" min="0" data-base="gizmos"></div>
+        <div class="setrow"><span>Pirate Shop Token</span><input type="number" inputmode="numeric" min="0" data-base="tokens"></div>
+        <div class="hint" style="padding-top:12px">Deine Daten liegen nur in diesem Browser auf diesem Gerät. Sichere sie ab und zu, zum Beispiel vor einem Handywechsel.</div>
+        <div class="btnrow">
+          <button class="editbtn" data-act="export">Sichern (Datei)</button>
+          <button class="editbtn" data-act="importPick">Laden</button>
+          <button class="editbtn" id="wipeBtn" data-act="wipe">Alles löschen</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <div class="sect" style="padding-top:14px">Mein Name (Online-Sicherung)</div>
+        <div id="cloudOff" class="hint">Die Online-Sicherung ist in dieser Version nicht eingerichtet. Nutze den Wiederherstellungs-Code unten.</div>
+        <div id="cloudOut" style="display:none">
+          <div class="hint">Wähle einen Namen, den du dir merkst. Damit holst du deine Daten auf jedem Gerät zurück. Achtung: Wer deinen Namen kennt, kann deine Daten sehen und ändern. Wähle ihn deshalb nicht zu einfach (mindestens 3 Zeichen).</div>
+          <input id="cloudName" class="nameIn" type="text" maxlength="40" placeholder="Dein Name, z. B. kyle-kisten-26" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <div class="btnrow"><button class="editbtn" data-act="cloudCreate">Name anlegen</button><button class="editbtn" id="cloudLoginBtn" data-act="cloudLogin">Mit Namen laden</button></div>
+        </div>
+        <div id="cloudIn" style="display:none">
+          <div class="hint">☁ Verbunden als <b id="cloudWho"></b>. Änderungen werden automatisch online gesichert.</div>
+          <div class="btnrow"><button class="editbtn" data-act="cloudNow">Jetzt sichern</button><button class="editbtn" data-act="cloudUnlink">Trennen</button></div>
+        </div>
+        <div class="hint" id="cloudMsg"></div>
+        <div class="sect" style="padding-top:14px">Wiederherstellungs-Code</div>
+        <div class="hint">Erzeuge einen Code und speichere ihn irgendwo (Notizen-App, Chat mit dir selbst, Mail). Mit dem Code stellst du alles auf jedem Gerät wieder her.</div>
+        <div class="btnrow"><button class="editbtn" data-act="genCode">Code erzeugen</button><button class="editbtn" data-act="copyCode">Kopieren</button></div>
+        <textarea id="codeOut" class="code" readonly rows="3" placeholder="Hier erscheint dein Code"></textarea>
+        <div class="hint" style="padding-top:8px">Code einfügen, um wiederherzustellen:</div>
+        <textarea id="codeIn" class="code" rows="3" placeholder="KT1.…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+        <div class="btnrow"><button class="editbtn" id="restoreBtn" data-act="restore">Wiederherstellen</button></div>
+        <div class="hint" id="codeMsg"></div>
+        <div class="hint" id="lastBackup"></div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ================= ROUND ================= -->
+  <section id="round" class="view">
+    <div class="topbar">
+      <div class="pill"><i></i>Runde <span id="rNo">1</span></div>
+      <button class="ghost" id="cancelBtn" data-act="cancel">Verwerfen</button>
+    </div>
+
+    <div class="trio">
+      <div class="tile t" id="tileT">
+        <div class="ico" id="icoT"></div>
+        <div class="val" id="rT">0</div>
+        <div class="lbl">Pirate Shop Token</div>
+        <button class="add" data-act="tokenUp" aria-label="Token plus">+</button>
+        <button class="sub" data-act="tokenDown" aria-label="Token minus">−</button>
+      </div>
+
+      <div class="tile c" id="tileC" data-act="chestUp">
+        <div class="ico" id="icoC"></div>
+        <div class="val" id="rC">0</div>
+        <div class="lbl">Kisten in dieser Runde</div>
+        <button class="add" data-act="chestUp" aria-label="Kiste plus">+ Kiste</button>
+        <button class="sub" data-act="chestDown" aria-label="Kiste minus">−</button>
+      </div>
+
+      <div class="tile g" id="tileG">
+        <div class="ico" id="icoG"></div>
+        <div class="val" id="rG">0</div>
+        <div class="lbl">Gizmos</div>
+        <button class="add" data-act="gizmoUp" aria-label="Gizmo plus">+</button>
+        <button class="sub" data-act="gizmoDown" aria-label="Gizmo minus">−</button>
+      </div>
+    </div>
+
+    <div class="runtotal">Gesamt inkl. dieser Runde: <b id="rTotal">0</b> Kisten<br>🎯 Gizmo-Chance pro Kiste: <b id="rChance">0,00</b> %</div>
+    <button class="cta green" data-act="end">✓&nbsp; Runde beenden</button>
+  </section>
+
+  <!-- ================= RESULT ================= -->
+  <section id="result" class="view">
+    <div class="resTitle">
+      <div class="float" id="resChest" style="display:inline-block"></div>
+      <h2>Runde <span id="resN">1</span> geschafft!</h2>
+      <p>Das hast du in dieser Runde geholt</p>
+    </div>
+    <div class="tiles3">
+      <div class="rt"><b class="c-gold" id="resC">0</b><span>Kisten</span></div>
+      <div class="rt"><b class="c-blue" id="resG">0</b><span>Gizmos</span></div>
+      <div class="rt"><b class="c-violet" id="resT">0</b><span>Token</span></div>
+    </div>
+    <div class="card">
+      <div class="sect" style="text-align:center">Neuer Gesamtstand</div>
+      <div class="bigtotal"><b id="resTotal">0</b><span>Kisten insgesamt</span></div>
+      <div class="kv"><span>Gizmos insgesamt</span><b class="c-blue" id="resGT">0</b></div>
+      <div class="kv"><span>Pirate Shop Token insgesamt</span><b class="c-violet" id="resTT">0</b></div>
+      <div class="kv"><span>Gizmo-Chance pro Kiste</span><b class="c-blue"><span id="resChance">0,00</span> %</b></div>
+      <div class="kv"><span>Ø Kisten pro Runde</span><b class="c-gold" id="resAvgC">0,0</b></div>
+      <div class="kv"><span>Ø Gizmos pro Runde</span><b class="c-blue" id="resAvgG">0,0</b></div>
+      <div class="kv"><span>Runden gespielt</span><b id="resRounds">0</b></div>
+    </div>
+    <button class="cta" data-act="done">Fertig</button>
+  </section>
+  <p style="text-align:center;color:var(--muted);font-size:11px;margin:24px 0 0">Fan-Projekt, nicht mit Epic Games verbunden. Alle Daten bleiben in deinem Browser.</p>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+  var LS_KEY = "kisten-tracker-v1";
+  var REDUCED = false;
+  try { REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch(e){}
+  var DEFAULT = { base:{chests:0,gizmos:0,tokens:0}, rounds:[], current:null };
+  var S = loadLocal() || clone(DEFAULT);
+  
+  var armedDel = null, armTimer = null;
+  var resultShown = false, curView = null, newestIdx = -1;
+  var lastAct = "", lastActT = 0, viewChangedAt = 0, editIdx = null;
+
+  function $(id){ return document.getElementById(id); }
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  function num(v, fb){ v = Number(v); return isFinite(v) ? v : fb; }
+  function normalize(d){
+    d = clone(d || {}); var b = d.base || {};   // tiefe Kopie: Daten aus dem Speicher sind schreibgeschuetzt
+    return { base:{ chests:num(b.chests,0), gizmos:num(b.gizmos,0), tokens:num(b.tokens,0) },
+             rounds: Array.isArray(d.rounds) ? d.rounds : [], current: d.current || null, ts: num(d.ts,0) };
+  }
+  function loadLocal(){ try { var r = localStorage.getItem(LS_KEY); return r ? normalize(JSON.parse(r)) : null; } catch(e){ return null; } }
+  function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(S)); return true; } catch(e){ return false; } }
+
+  /* ---------- icons ---------- */
+  function chestSvg(){
+    return '<svg class="chest" viewBox="0 0 120 100" width="100%" height="100%" aria-hidden="true">' +
+      '<ellipse cx="60" cy="94" rx="46" ry="5" fill="rgba(0,0,0,.35)"/>' +
+      '<g class="glow"><ellipse cx="60" cy="46" rx="42" ry="9" fill="#ffe27a"/><ellipse cx="60" cy="46" rx="26" ry="5" fill="#fff6c9"/></g>' +
+      '<rect x="14" y="46" width="92" height="44" rx="7" fill="#7a4210"/>' +
+      '<rect x="14" y="46" width="92" height="9" fill="#ffc83d"/>' +
+      '<rect x="24" y="55" width="7" height="35" fill="#d9962a"/><rect x="89" y="55" width="7" height="35" fill="#d9962a"/>' +
+      '<g class="lid"><path d="M14 46 Q14 12 60 12 Q106 12 106 46 Z" fill="#a8641f"/>' +
+      '<path d="M14 46 Q14 12 60 12 Q106 12 106 46 L106 38 Q100 22 60 22 Q20 22 14 38 Z" fill="#c27a2c"/>' +
+      '<rect x="14" y="38" width="92" height="9" fill="#ffc83d"/><rect x="24" y="16" width="7" height="30" fill="#d9962a" transform="skewX(-4)"/></g>' +
+      '<rect x="51" y="42" width="18" height="24" rx="4" fill="#ffd95a" stroke="#b9791a" stroke-width="2"/>' +
+      '<circle cx="60" cy="52" r="3.6" fill="#7a4210"/><rect x="58.6" y="53" width="2.8" height="7" rx="1" fill="#7a4210"/>' +
+      '</svg>';
+  }
+  function gearSvg(){
+    return '<svg viewBox="-40 -40 80 80" width="100%" height="100%" aria-hidden="true"><g class="gear">' +
+      '<circle r="26" fill="none" stroke="#5ab0ff" stroke-width="11" stroke-dasharray="6.2 4.4"/>' +
+      '<circle r="20" fill="#5ab0ff"/><circle r="12" fill="#8ac8ff"/><circle r="6.5" fill="#222850"/></g></svg>';
+  }
+  function coinSvg(){
+    return '<svg viewBox="-40 -40 80 80" width="100%" height="100%" aria-hidden="true"><g class="coin">' +
+      '<circle r="34" fill="#9b6dff"/><circle r="29" fill="#b48cff"/><circle r="29" fill="none" stroke="#7a4fe0" stroke-width="2.5" stroke-dasharray="3 3"/>' +
+      '<polygon points="0,-17 5,-6 17,-5 8,3 10,15 0,9 -10,15 -8,3 -17,-5 -5,-6" fill="#fff3b0" stroke="#e9b93a" stroke-width="1.5" stroke-linejoin="round"/></g></svg>';
+  }
+  $("heroChest").innerHTML = '<div style="width:96px;height:80px;margin:0 auto">' + chestSvg() + '</div>';
+  $("resChest").innerHTML = '<div style="width:90px;height:76px">' + chestSvg() + '</div>';
+  $("icoC").innerHTML = chestSvg();
+  $("icoG").innerHTML = gearSvg();
+  $("icoT").innerHTML = coinSvg();
+
+  /* ---------- number helpers ---------- */
+  function fmtDec(v, dec){ if (!dec) return String(Math.round(v)); var d = dec === true ? 1 : dec; return v.toFixed(d).replace(".", ","); }
+  function put(el, v, dec){ el._tgt = v; el._shown = v; el.textContent = fmtDec(v, dec); }
+  function countTo(el, to, dec, ms, from){
+    cancelAnimationFrame(el._raf);
+    var start = from != null ? from : (el._shown != null ? el._shown : 0);
+    if (REDUCED || start === to) { put(el, to, dec); return; }
+    el._tgt = to;
+    var t0 = performance.now(); ms = ms || 800;
+    (function step(t){
+      var p = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+      var v = start + (to - start) * e;
+      el._shown = v; el.textContent = fmtDec(v, dec);
+      if (p < 1) el._raf = requestAnimationFrame(step); else put(el, to, dec);
+    })(t0);
+  }
+  function setPlain(el, v){ if (el._tgt !== v) { el._tgt = v; el.textContent = v; } }
+
+  /* ---------- effects ---------- */
+  function pop(el){ el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
+  function replay(el, cls, ms){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    setTimeout(function(){ el.classList.remove(cls); }, ms || 600); }
+  function buzz(ms){ try { navigator.vibrate && navigator.vibrate(ms || 10); } catch(e){} }
+  function burst(host, e, text, color, n){
+    if (REDUCED) return;
+    var r = host.getBoundingClientRect();
+    var x = (e && e.clientX) ? e.clientX - r.left : r.width / 2;
+    var y = (e && e.clientY) ? e.clientY - r.top : r.height / 2;
+    var f = document.createElement("span");
+    f.className = "floater"; f.textContent = text; f.style.left = x + "px"; f.style.top = y + "px"; f.style.color = color;
+    host.appendChild(f); setTimeout(function(){ f.remove(); }, 900);
+    for (var i = 0; i < (n || 9); i++) {
+      var s = document.createElement("span"), a = Math.random() * Math.PI * 2, d = 28 + Math.random() * 40;
+      s.className = "spark"; s.style.left = x + "px"; s.style.top = y + "px"; s.style.background = color;
+      s.style.setProperty("--dx", Math.cos(a) * d + "px"); s.style.setProperty("--dy", Math.sin(a) * d + "px");
+      host.appendChild(s); (function(el){ setTimeout(function(){ el.remove(); }, 650); })(s);
+    }
+  }
+  function confetti(n, colors){
+    if (REDUCED) return;
+    var box = $("confetti");
+    for (var i = 0; i < n; i++) {
+      var c = document.createElement("span");
+      c.className = "conf"; c.style.left = Math.random() * 100 + "%";
+      c.style.background = colors[i % colors.length];
+      c.style.setProperty("--x", (Math.random() * 160 - 80) + "px");
+      c.style.setProperty("--r", (Math.random() * 900 - 450) + "deg");
+      c.style.setProperty("--dur", (1.8 + Math.random() * 1.4) + "s");
+      c.style.setProperty("--delay", (Math.random() * 0.5) + "s");
+      box.appendChild(c); (function(el){ setTimeout(function(){ el.remove(); }, 3800); })(c);
+    }
+  }
+
+  /* ---------- derived ---------- */
+  function sums(){ var c=0,g=0,t=0; S.rounds.forEach(function(r){ c+=r.chests; g+=r.gizmos; t+=r.tokens; }); return {c:c,g:g,t:t}; }
+  function chancePct(g, c){ return c > 0 ? g / c * 100 : 0; }
+  function stats(){
+    var s = sums(), cur = S.current, n = S.rounds.length;
+    return { n:n, rc:s.c, rg:s.g, rt:s.t,
+      tc: S.base.chests + s.c + (cur ? cur.chests : 0),
+      tg: S.base.gizmos + s.g + (cur ? cur.gizmos : 0),
+      tt: S.base.tokens + s.t + (cur ? cur.tokens : 0),
+      ac: n ? s.c / n : 0, ag: n ? s.g / n : 0, at: n ? s.t / n : 0 };
+  }
+
+  /* ---------- status + persistence ---------- */
+  var statusEl = $("status");
+  function setStatus(k){
+    var m = { ok:["✓ Gespeichert","ok"], busy:["Speichert …",""], local:["✓ Auf diesem Gerät gespeichert","ok"], err:["Speichern nicht möglich","warn"], cloud:["☁ Online gesichert","ok"], cloudBusy:["☁ Sichert …",""], cloudErr:["☁ Offline, wird später gesichert","warn"] }[k] || ["",""];
+    statusEl.textContent = m[0]; statusEl.className = "status " + m[1];
+  }
+  function commit(){
+    S.ts = Math.max(Date.now(), (S.ts || 0) + 1);
+    var okLocal = saveLocal();
+    setStatus(okLocal ? "local" : "err");
+    cloudSchedule();
+    if (okLocal && cloudOn && getName() && !cloudDirty) setStatus("cloud");
+    refresh();
+  }
+
+  /* ---------- Sicherung: Wiederherstellungs-Code ---------- */
+  var LB_KEY = "kisten-tracker-lastbackup", SN_KEY = "kisten-tracker-nudgesnooze", DAY = 86400000;
+  function lsGet(k){ try { return Number(localStorage.getItem(k)) || 0; } catch(e){ return 0; } }
+  function lsSet(k, v){ try { localStorage.setItem(k, String(v)); } catch(e){} }
+  function b64u(bytes){
+    var s = ""; for (var i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function unb64u(str){
+    str = str.replace(/-/g, "+").replace(/_/g, "/"); while (str.length % 4) str += "=";
+    var bin = atob(str), a = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a;
+  }
+  function chk(str){ var h = 2166136261; for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0; return h.toString(36); }
+  async function pipe(bytes, stream){
+    var w = stream.writable.getWriter(); w.write(bytes); w.close();
+    return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+  }
+  async function makeCode(){
+    var o = packData();
+    var json = new TextEncoder().encode(JSON.stringify(o)), bytes = json, tag = "KT0";
+    if (typeof CompressionStream !== "undefined") {
+      try { bytes = await pipe(json, new CompressionStream("deflate-raw")); tag = "KT1"; } catch(e){ bytes = json; tag = "KT0"; }
+    }
+    var p = b64u(bytes);
+    return tag + "." + p + "." + chk(p);
+  }
+  async function readCode(code){
+    var parts = code.replace(/\s+/g, "").split(".");
+    if (parts.length !== 3 || (parts[0] !== "KT0" && parts[0] !== "KT1")) throw new Error("Das ist kein gültiger Code.");
+    if (chk(parts[1]) !== parts[2]) throw new Error("Der Code ist unvollständig oder hat einen Tippfehler.");
+    var bytes = unb64u(parts[1]);
+    if (parts[0] === "KT1") bytes = await pipe(bytes, new DecompressionStream("deflate-raw"));
+    var o = JSON.parse(new TextDecoder().decode(bytes));
+    return unpackData(o);
+  }
+  function packData(){
+    return { v:1, b:[S.base.chests, S.base.gizmos, S.base.tokens], ts: S.ts || 0,
+      r: S.rounds.map(function(r){ return [r.chests, r.gizmos, r.tokens, Math.round(r.at / 1000), r.edited ? 1 : 0]; }) };
+  }
+  function unpackData(o){
+    if (!o || !Array.isArray(o.r) || !Array.isArray(o.b)) throw new Error("Die Daten sind beschädigt.");
+    var pos = function(v){ return Math.max(0, Math.floor(num(v, 0))); };
+    return normalize({
+      base: { chests: pos(o.b[0]), gizmos: pos(o.b[1]), tokens: pos(o.b[2]) }, ts: num(o.ts, 0),
+      rounds: o.r.map(function(r){ return { chests:pos(r[0]), gizmos:pos(r[1]), tokens:pos(r[2]), at:pos(r[3]) * 1000, edited: !!r[4] }; })
+    });
+  }
+
+  /* ---------- Online-Sicherung (Name) ---------- */
+  var CC = window.KT_CLOUD || {}, cloudOn = !!(CC.url && CC.key), CN_KEY = "kisten-tracker-cloudname";
+  var cloudTimer = null, cloudBusy = false, cloudDirty = false, lastSig = "";
+  function getName(){ try { return localStorage.getItem(CN_KEY) || ""; } catch(e){ return ""; } }
+  function setName(n){ try { if (n) localStorage.setItem(CN_KEY, n); else localStorage.removeItem(CN_KEY); } catch(e){} }
+  function normName(v){ return String(v || "").trim().toLowerCase().replace(/\s+/g, " "); }
+  function sigNow(){ return JSON.stringify([S.base, S.rounds]); }
+  function cMsg(t, kind){ var m = $("cloudMsg"); m.textContent = t; m.className = "hint" + (kind ? " msg-" + kind : ""); }
+  function netMsg(err){
+    var m = String((err && err.message) || err);
+    if (/name_invalid/.test(m)) return "Der Name muss 3 bis 40 Zeichen lang sein.";
+    if (/too_large/.test(m)) return "Die Daten sind zu groß für die Online-Sicherung.";
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Keine Verbindung. Versuche es später nochmal.";
+    return "Online-Fehler: " + m;
+  }
+  async function rpc(fn, body){
+    var headers = { "Content-Type": "application/json", apikey: CC.key };
+    if (/^eyJ/.test(CC.key)) headers.Authorization = "Bearer " + CC.key;   // nur bei klassischen JWT-Schluesseln; "sb_publishable_…" nur als apikey
+    var res = await fetch(CC.url.replace(/\/+$/, "") + "/rest/v1/rpc/" + fn, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(body)
+    });
+    var txt = await res.text(), j = null;
+    try { j = txt ? JSON.parse(txt) : null; } catch(e){}
+    if (!res.ok) throw new Error((j && (j.message || j.hint)) || ("Fehler " + res.status));
+    return j;
+  }
+  function cloudSchedule(){
+    if (!cloudOn || !getName()) return;
+    if (sigNow() === lastSig) return;
+    cloudDirty = true; setStatus("cloudBusy");
+    clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudPush, 2000);
+  }
+  async function cloudPush(){
+    var name = getName(); if (!cloudOn || !name) return;
+    if (cloudBusy) { cloudTimer = setTimeout(cloudPush, 800); return; }
+    cloudBusy = true; var sig = sigNow();
+    try {
+      var ok = await rpc("kt_put", { p_name: name, p_data: packData() });
+      if (ok === false) await rpc("kt_create", { p_name: name, p_data: packData() });
+      lastSig = sig;
+      if (sigNow() !== lastSig) cloudSchedule(); else { cloudDirty = false; setStatus("cloud"); }
+    } catch(e) { setStatus("cloudErr"); clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudPush, 10000); }
+    finally { cloudBusy = false; }
+  }
+  async function cloudPull(){
+    var name = getName();
+    if (!cloudOn || !name || S.current || cloudDirty || cloudBusy) return;
+    try {
+      var o = await rpc("kt_get", { p_name: name });
+      if (!o) { lastSig = ""; cloudSchedule(); return; }
+      var ns = unpackData(o);
+      if (ns.ts > (S.ts || 0)) { S = ns; S.current = null; saveLocal(); lastSig = sigNow(); refresh(); setStatus("cloud"); }
+      else if (JSON.stringify([ns.base, ns.rounds]) === sigNow()) { lastSig = sigNow(); setStatus("cloud"); }
+      else { cloudSchedule(); }
+    } catch(e) { setStatus("cloudErr"); }
+  }
+  function setMsg(t, kind){ var m = $("codeMsg"); m.textContent = t; m.className = "hint" + (kind ? " msg-" + kind : ""); }
+  function backupInfo(){
+    var lb = lsGet(LB_KEY), now = Date.now();
+    var days = lb ? Math.floor((now - lb) / DAY) : null;
+    $("lastBackup").textContent = lb ? "Letzte Sicherung: " + (days === 0 ? "heute" : days === 1 ? "gestern" : "vor " + days + " Tagen") : "Noch nicht gesichert.";
+    var show = S.rounds.length >= 1 && (!lb || now - lb > 7 * DAY) && now > lsGet(SN_KEY);
+    $("nudge").style.display = show ? "block" : "none";
+    if (show) $("nudgeTxt").textContent = lb ? "Deine letzte Sicherung ist " + days + " Tage her." : "Du hast deine Daten noch nicht gesichert. Sie liegen nur in diesem Browser.";
+  }
+
+  /* ---------- views ---------- */
+  function syncView(){
+    var want = S.current ? "round" : (resultShown ? "result" : "home");
+    if (want === curView) return;
+    ["home","round","result"].forEach(function(v){ $(v).classList.toggle("on", v === want); });
+    curView = want; viewChangedAt = Date.now();
+    try { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch(e){}
+  }
+  function pad(n){ return n < 10 ? "0" + n : "" + n; }
+  function dstr(ts){ var d = new Date(ts); return pad(d.getDate()) + "." + pad(d.getMonth()+1) + ". " + pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+
+  function stepper(i, k, label, cls){
+    var v = S.rounds[i][k];
+    return '<div class="step"><span>' + label + '</span><div class="sb">' +
+      '<button data-act="rEdit" data-i="' + i + '" data-k="' + k + '" data-d="-1" aria-label="' + label + ' minus">−</button>' +
+      '<b class="' + cls + '">' + v + '</b>' +
+      '<button data-act="rEdit" data-i="' + i + '" data-k="' + k + '" data-d="1" aria-label="' + label + ' plus">+</button></div></div>';
+  }
+  function renderList(){
+    var h = "", n = S.rounds.length;
+    if (!n) h = '<div class="empty">Noch keine Runde beendet.</div>';
+    for (var i = n - 1; i >= 0; i--) {
+      var r = S.rounds[i], arm = armedDel === i, ed = editIdx === i;
+      h += '<div class="item' + (i === newestIdx ? " new" : "") + (ed ? " editing" : "") + '"><div class="n">#' + (i+1) + '</div><div class="d">' +
+        '<span><b class="c-gold">' + r.chests + '</b> Kisten</span><span><b class="c-blue">' + r.gizmos + '</b> Gizmos</span>' +
+        '<span><b class="c-violet">' + r.tokens + '</b> Token</span><span class="when">' + dstr(r.at) + (r.edited ? " · bearbeitet" : "") + '</span></div>' +
+        '<button class="editbtn' + (ed ? " on" : "") + '" data-act="edit" data-i="' + i + '">' + (ed ? "Fertig" : "Bearbeiten") + '</button>' +
+        '<button class="del' + (arm ? " arm" : "") + '" data-act="del" data-i="' + i + '">' + (arm ? "Löschen?" : "✕") + '</button>';
+      if (ed) {
+        h += '<div class="editbox">' + stepper(i, "chests", "Kisten", "c-gold") + stepper(i, "gizmos", "Gizmos", "c-blue") +
+             stepper(i, "tokens", "Pirate Shop Token", "c-violet") + '</div>';
+      }
+      h += '</div>';
+    }
+    $("hList").innerHTML = h; newestIdx = -1;
+  }
+
+  function refresh(){
+    var st = stats(), cur = S.current;
+    countTo($("hTotal"), st.tc, 0, 900);
+    countTo($("hG"), st.tg, 0, 700); countTo($("hT"), st.tt, 0, 700); countTo($("hN"), st.n, 0, 600);
+    countTo($("hAvgC"), st.ac, 1, 700); countTo($("hAvgG"), st.ag, 1, 700); countTo($("hAvgT"), st.at, 1, 700);
+    setPlain($("hCount"), st.n);
+    countTo($("hChance"), chancePct(st.tg, st.tc), 2, 700);
+    if (cur) {
+      setPlain($("rNo"), st.n + 1);
+      put($("rC"), cur.chests, 0); put($("rG"), cur.gizmos, 0); put($("rT"), cur.tokens, 0);
+      put($("rTotal"), st.tc, 0); put($("rChance"), chancePct(st.tg, st.tc), 2);
+    }
+    renderList();
+    document.querySelectorAll("[data-base]").forEach(function(inp){
+      if (document.activeElement !== inp) inp.value = S.base[inp.getAttribute("data-base")];
+    });
+    backupInfo();
+    var nm = getName();
+    $("cloudOff").style.display = cloudOn ? "none" : "block";
+    $("cloudOut").style.display = (cloudOn && !nm) ? "block" : "none";
+    $("cloudIn").style.display = (cloudOn && nm) ? "block" : "none";
+    $("cloudWho").textContent = nm;
+    $("cloudLoginBtn").textContent = armedDel === "cloudLogin" ? "Wirklich ersetzen?" : "Mit Namen laden";
+    $("restoreBtn").textContent = armedDel === "restore" ? "Wirklich ersetzen?" : "Wiederherstellen";
+    $("wipeBtn").textContent = armedDel === "wipe" ? "Wirklich löschen?" : "Alles löschen";
+    $("cancelBtn").textContent = armedDel === "cancel" ? "Wirklich verwerfen?" : "Verwerfen";
+    $("cancelBtn").classList.toggle("arm", armedDel === "cancel");
+    syncView();
+  }
+
+  /* ---------- actions ---------- */
+  function fx(tileId, valId, e, text, color, anim){
+    pop($(valId)); buzz(10);
+    var t = $(tileId); replay(t, "flash", 460);
+    burst(t, e, text, color, anim ? 10 : 7);
+  }
+  var act = {
+    start: function(){ S.current = { chests:0, gizmos:0, tokens:0, startedAt:Date.now() }; resultShown = false; buzz(15); },
+    chestUp: function(el, e){
+      S.current.chests++;
+      var c = document.querySelector("#icoC .chest"); c.classList.add("open"); setTimeout(function(){ c.classList.remove("open"); }, 170);
+      fx("tileC", "rC", e, "+1", "#ffc83d", true);
+    },
+    chestDown: function(){ if (S.current.chests > 0) { S.current.chests--; pop($("rC")); } else { replay($("tileC"), "shake", 260); return false; } },
+    gizmoUp: function(el, e){ S.current.gizmos++; replay(document.querySelector("#icoG .gear"), "spin", 600); fx("tileG", "rG", e, "+1", "#5ab0ff"); },
+    gizmoDown: function(){ if (S.current.gizmos > 0) { S.current.gizmos--; pop($("rG")); } else { replay($("tileG"), "shake", 260); return false; } },
+    tokenUp: function(el, e){ S.current.tokens++; replay(document.querySelector("#icoT .coin"), "flip", 650); fx("tileT", "rT", e, "+1", "#b48cff", true);
+      confetti(26, ["#b48cff", "#ffc83d", "#ffffff", "#5ab0ff"]); buzz(30); },
+    tokenDown: function(){ if (S.current.tokens > 0) { S.current.tokens--; pop($("rT")); } else { replay($("tileT"), "shake", 260); return false; } },
+    cancel: function(){
+      if (armedDel !== "cancel") { armedDel = "cancel"; clearTimeout(armTimer); armTimer = setTimeout(function(){ armedDel = null; refresh(); }, 3000); refresh(); return false; }
+      armedDel = null; S.current = null;
+    },
+    end: function(){
+      if (!S.current) return false;
+      var before = stats();
+      var r = { chests:S.current.chests, gizmos:S.current.gizmos, tokens:S.current.tokens, at:Date.now() };
+      S.rounds.push(r); S.current = null; newestIdx = S.rounds.length - 1;
+      resultShown = true;
+      var after = stats();
+      try { syncView(); } catch(err) { report(err); }
+      try { commit(); } catch(err) { report(err); }
+      try { syncView(); } catch(err) { report(err); }
+      try { showResult(r, before, after); } catch(err) { report(err); }
+      return false;
+    },
+    done: function(){ resultShown = false; buzz(8); },
+    edit: function(el){
+      var i = Number(el.getAttribute("data-i"));
+      editIdx = (editIdx === i) ? null : i; armedDel = null; refresh(); return false;
+    },
+    rEdit: function(el){
+      var i = Number(el.getAttribute("data-i")), k = el.getAttribute("data-k"), d = Number(el.getAttribute("data-d"));
+      var r = S.rounds[i];
+      if (!r || !(k in r)) return false;
+      var nv = r[k] + d;
+      if (nv < 0) return false;
+      r[k] = nv; r.edited = true;
+    },
+    genCode: function(){
+      makeCode().then(function(code){
+        $("codeOut").value = code; lsSet(LB_KEY, Date.now());
+        setMsg("Code erzeugt (" + code.length + " Zeichen). Kopiere ihn und bewahre ihn sicher auf.", "ok"); refresh();
+      }).catch(function(err){ setMsg("Code konnte nicht erzeugt werden: " + (err && err.message || err), "bad"); });
+      return false;
+    },
+    copyCode: function(){
+      var ta = $("codeOut");
+      if (!ta.value) { act.genCode(); setMsg("Code erzeugt. Tippe jetzt nochmal auf Kopieren.", "ok"); return false; }
+      var done = function(){ lsSet(LB_KEY, Date.now()); setMsg("✓ Code kopiert. Speichere ihn jetzt irgendwo ab.", "ok"); refresh(); };
+      var fallback = function(){
+        try { ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length); if (document.execCommand("copy")) { done(); return; } } catch(e){}
+        setMsg("Kopieren wurde blockiert. Der Code ist markiert, kopiere ihn von Hand.", "bad");
+      };
+      try { navigator.clipboard.writeText(ta.value).then(done, fallback); } catch(e){ fallback(); }
+      return false;
+    },
+    restore: function(){
+      var code = $("codeIn").value.trim();
+      if (!code) { setMsg("Füge zuerst deinen Code ein.", "bad"); return false; }
+      var hasData = S.rounds.length > 0 || S.base.chests > 0 || S.base.gizmos > 0 || S.base.tokens > 0;
+      if (hasData && armedDel !== "restore") {
+        armedDel = "restore"; clearTimeout(armTimer); armTimer = setTimeout(function(){ armedDel = null; refresh(); }, 4000);
+        setMsg("Das ersetzt deine aktuellen Daten. Tippe nochmal zum Bestätigen.", "bad"); refresh(); return false;
+      }
+      armedDel = null;
+      readCode(code).then(function(ns){
+        S = ns; S.current = null; resultShown = false; editIdx = null; commit();
+        $("codeIn").value = "";
+        setMsg("✓ Wiederhergestellt: " + S.rounds.length + " Runden, " + (S.base.chests + sums().c) + " Kisten.", "ok");
+      }).catch(function(err){ setMsg((err && err.message) || "Wiederherstellen fehlgeschlagen.", "bad"); refresh(); });
+      return false;
+    },
+    cloudCreate: function(){
+      var name = normName($("cloudName").value);
+      if (name.length < 3 || name.length > 40) { cMsg("Der Name muss 3 bis 40 Zeichen lang sein.", "bad"); return false; }
+      cMsg("Einen Moment …");
+      rpc("kt_create", { p_name: name, p_data: packData() }).then(function(ok){
+        if (ok === false) { cMsg("Der Name ist schon vergeben. Nimm einen anderen. Ist es dein eigener Name, tippe auf „Mit Namen laden“.", "bad"); return; }
+        setName(name); lastSig = sigNow(); cloudDirty = false;
+        cMsg("✓ Angelegt. Merke dir diesen Namen: " + name, "ok"); setStatus("cloud"); refresh();
+      }).catch(function(err){ cMsg(netMsg(err), "bad"); });
+      return false;
+    },
+    cloudLogin: function(){
+      var name = normName($("cloudName").value);
+      if (name.length < 3 || name.length > 40) { cMsg("Gib deinen Namen ein (3 bis 40 Zeichen).", "bad"); return false; }
+      var hasData = S.rounds.length > 0 || S.base.chests > 0 || S.base.gizmos > 0 || S.base.tokens > 0;
+      if (hasData && armedDel !== "cloudLogin") {
+        armedDel = "cloudLogin"; clearTimeout(armTimer); armTimer = setTimeout(function(){ armedDel = null; refresh(); }, 4000);
+        cMsg("Das ersetzt die Daten auf diesem Gerät. Tippe nochmal zum Bestätigen.", "bad"); refresh(); return false;
+      }
+      armedDel = null; cMsg("Einen Moment …");
+      rpc("kt_get", { p_name: name }).then(function(o){
+        if (!o) { cMsg("Diesen Namen gibt es nicht. Schreibweise prüfen oder „Name anlegen“ nutzen.", "bad"); refresh(); return; }
+        var ns = unpackData(o);
+        S = ns; S.current = null; resultShown = false; editIdx = null;
+        setName(name); lastSig = sigNow(); cloudDirty = false; commit();
+        cMsg("✓ Geladen: " + S.rounds.length + " Runden, " + (S.base.chests + sums().c) + " Kisten.", "ok"); setStatus("cloud");
+      }).catch(function(err){ cMsg(netMsg(err), "bad"); refresh(); });
+      return false;
+    },
+    cloudNow: function(){
+      lastSig = ""; clearTimeout(cloudTimer); cloudDirty = true; setStatus("cloudBusy");
+      cloudPush().then(function(){ cMsg(cloudDirty ? "Konnte nicht sichern, ich versuche es weiter." : "✓ Online gesichert.", cloudDirty ? "bad" : "ok"); });
+      return false;
+    },
+    cloudUnlink: function(){
+      setName(""); lastSig = ""; cloudDirty = false; clearTimeout(cloudTimer);
+      cMsg("Getrennt. Deine Daten bleiben auf diesem Gerät, der Online-Eintrag bleibt bestehen.", "ok"); setStatus("local"); refresh(); return false;
+    },
+    nudgeGo: function(){
+      var d = $("settings"); d.open = true; refresh();
+      d.scrollIntoView({ behavior: "smooth", block: "start" }); act.genCode(); return false;
+    },
+    nudgeLater: function(){ lsSet(SN_KEY, Date.now() + 7 * DAY); refresh(); return false; },
+    export: function(){
+      var d = new Date(), name = "kisten-tracker-" + d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()) + ".json";
+      var blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
+      var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+      lsSet(LB_KEY, Date.now());
+      return true;
+    },
+    importPick: function(){ $("importFile").click(); return false; },
+    wipe: function(){
+      if (armedDel !== "wipe") { armedDel = "wipe"; clearTimeout(armTimer); armTimer = setTimeout(function(){ armedDel = null; refresh(); }, 3000); refresh(); return false; }
+      armedDel = null; S = clone(DEFAULT); resultShown = false; editIdx = null;
+    },
+    del: function(el){
+      var i = Number(el.getAttribute("data-i"));
+      editIdx = null;
+      if (armedDel !== i) { armedDel = i; clearTimeout(armTimer); armTimer = setTimeout(function(){ armedDel = null; refresh(); }, 3000); renderList(); return false; }
+      armedDel = null; S.rounds.splice(i, 1);
+    }
+  };
+
+  function showResult(r, before, after){
+    setPlain($("resN"), after.n);
+    ["resC","resG","resT"].forEach(function(id){ $(id)._shown = 0; });
+    countTo($("resC"), r.chests, 0, 900, 0); countTo($("resG"), r.gizmos, 0, 900, 0); countTo($("resT"), r.tokens, 0, 900, 0);
+    countTo($("resTotal"), after.tc, 0, 1300, before.tc);
+    countTo($("resGT"), after.tg, 0, 1000, before.tg); countTo($("resTT"), after.tt, 0, 1000, before.tt);
+    countTo($("resAvgC"), after.ac, 1, 1100, before.ac); countTo($("resAvgG"), after.ag, 1, 1100, before.ag);
+    countTo($("resRounds"), after.n, 0, 600, before.n);
+    countTo($("resChance"), chancePct(after.tg, after.tc), 2, 1100, chancePct(before.tg, before.tc));
+    confetti(r.tokens > 0 ? 70 : 36, r.tokens > 0 ? ["#ffc83d","#b48cff","#5ab0ff","#3ddc97","#fff"] : ["#ffc83d","#ff9a1f","#ffe38a"]);
+    buzz(25);
+  }
+
+  function report(err){
+    try {
+      var b = $("errBox"); b.textContent = "Fehler: " + (err && err.message ? err.message : err); b.style.display = "block";
+    } catch(x){}
+  }
+  window.addEventListener("error", function(ev){ report(ev.message); });
+  window.addEventListener("unhandledrejection", function(ev){ report(ev.reason); });
+
+  document.addEventListener("click", function(e){
+    try {
+      var t = e.target;
+      var el = t && t.closest ? t.closest("[data-act]") : (t && t.parentElement ? t.parentElement.closest("[data-act]") : null);
+      if (!el) return;
+      var a = el.getAttribute("data-act");
+      if (!act[a]) return;
+      // Doppelklick-Sperre: gleiche Aktion binnen kurzer Zeit = Geisterklick, ignorieren
+      var now = Date.now();
+      var counting = /^(chest|gizmo|token)(Up|Down)$/.test(a);
+      var lock = counting ? 230 : (a === "rEdit" ? 0 : 500);
+      if (lock && lastAct === a && now - lastActT < lock) return;
+      if (counting && now - viewChangedAt < 350) return;   // Klick, der noch zum Rundenstart gehoert
+      lastAct = a; lastActT = now;
+      if (a !== "cancel" && a !== "del" && a !== "edit" && a !== "rEdit" && a !== "wipe" && a !== "restore" && a !== "cloudLogin") { armedDel = null; }
+      var res = act[a](el, e);
+      if (res === false) return;
+      commit();
+    } catch(err) { report(err); try { refresh(); } catch(x){} }
+  });
+  $("importFile").addEventListener("change", function(){
+    var f = this.files && this.files[0]; var inp = this;
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      try {
+        var obj = JSON.parse(rd.result);
+        if (!obj || (!Array.isArray(obj.rounds) && !obj.base)) throw new Error("Das ist keine Kisten-Tracker-Datei.");
+        S = normalize(obj); S.current = null; resultShown = false; editIdx = null; commit();
+      } catch(err) { report(err); }
+      inp.value = "";
+    };
+    rd.onerror = function(){ report("Datei konnte nicht gelesen werden."); };
+    rd.readAsText(f);
+  });
+  document.addEventListener("change", function(e){
+    var el = e.target.closest("[data-base]");
+    if (!el) return;
+    S.base[el.getAttribute("data-base")] = Math.max(0, Math.floor(num(el.value, 0)));
+    commit();
+  });
+
+  refresh();
+  setStatus("local");
+  if (cloudOn && getName()) { setStatus("cloudBusy"); cloudPull(); }
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) cloudPull(); });
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+})();
+</script>
+</body>
+</html>
