@@ -98,7 +98,6 @@
   .nudge{display:none;border-color:rgba(255,200,61,.4);font-size:14px;line-height:1.45}
   .nudge .btnrow{padding:10px 0 0}
   .msg-bad{color:var(--red)!important} .msg-ok{color:var(--green)!important}
-  .nameIn{width:100%;background:var(--card2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font:16px system-ui,sans-serif;margin-bottom:8px}
   .btnrow{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:6px}
   .empty{color:var(--muted);font-size:14px;padding:2px 0 12px}
   .setrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;font-size:14px}
@@ -243,18 +242,6 @@
           <button class="editbtn" id="wipeBtn" data-act="wipe">Alles löschen</button>
         </div>
         <input type="file" id="importFile" accept="application/json,.json" hidden>
-        <div class="sect" style="padding-top:14px">Mein Name (Online-Sicherung)</div>
-        <div id="cloudOff" class="hint">Die Online-Sicherung ist in dieser Version nicht eingerichtet. Nutze den Wiederherstellungs-Code unten.</div>
-        <div id="cloudOut" style="display:none">
-          <div class="hint">Wähle einen Namen, den du dir merkst. Damit holst du deine Daten auf jedem Gerät zurück. Achtung: Wer deinen Namen kennt, kann deine Daten sehen und ändern. Wähle ihn deshalb nicht zu einfach (mindestens 3 Zeichen).</div>
-          <input id="cloudName" class="nameIn" type="text" maxlength="40" placeholder="Dein Name, z. B. kyle-kisten-26" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <div class="btnrow"><button class="editbtn" data-act="cloudCreate">Name anlegen</button><button class="editbtn" id="cloudLoginBtn" data-act="cloudLogin">Mit Namen laden</button></div>
-        </div>
-        <div id="cloudIn" style="display:none">
-          <div class="hint">☁ Verbunden als <b id="cloudWho"></b>. Änderungen werden automatisch online gesichert.</div>
-          <div class="btnrow"><button class="editbtn" data-act="cloudNow">Jetzt sichern</button><button class="editbtn" data-act="cloudUnlink">Trennen</button></div>
-        </div>
-        <div class="hint" id="cloudMsg"></div>
         <div class="sect" style="padding-top:14px">Wiederherstellungs-Code</div>
         <div class="hint">Erzeuge einen Code und speichere ihn irgendwo (Notizen-App, Chat mit dir selbst, Mail). Mit dem Code stellst du alles auf jedem Gerät wieder her.</div>
         <div class="btnrow"><button class="editbtn" data-act="genCode">Code erzeugen</button><button class="editbtn" data-act="copyCode">Kopieren</button></div>
@@ -332,7 +319,6 @@
   <p style="text-align:center;color:var(--muted);font-size:11px;margin:24px 0 0">Fan-Projekt, nicht mit Epic Games verbunden. Alle Daten bleiben in deinem Browser.</p>
 </div>
 
-<script src="config.js"></script>
 <script>
 (function(){
   var LS_KEY = "kisten-tracker-v1";
@@ -455,15 +441,12 @@
   /* ---------- status + persistence ---------- */
   var statusEl = $("status");
   function setStatus(k){
-    var m = { ok:["✓ Gespeichert","ok"], busy:["Speichert …",""], local:["✓ Auf diesem Gerät gespeichert","ok"], err:["Speichern nicht möglich","warn"], cloud:["☁ Online gesichert","ok"], cloudBusy:["☁ Sichert …",""], cloudErr:["☁ Offline, wird später gesichert","warn"] }[k] || ["",""];
+    var m = { ok:["✓ Gespeichert","ok"], busy:["Speichert …",""], local:["✓ Auf diesem Gerät gespeichert","ok"], err:["Speichern nicht möglich","warn"] }[k] || ["",""];
     statusEl.textContent = m[0]; statusEl.className = "status " + m[1];
   }
   function commit(){
     S.ts = Math.max(Date.now(), (S.ts || 0) + 1);
-    var okLocal = saveLocal();
-    setStatus(okLocal ? "local" : "err");
-    cloudSchedule();
-    if (okLocal && cloudOn && getName() && !cloudDirty) setStatus("cloud");
+    setStatus(saveLocal() ? "local" : "err");
     refresh();
   }
 
@@ -515,64 +498,6 @@
     });
   }
 
-  /* ---------- Online-Sicherung (Name) ---------- */
-  var CC = window.KT_CLOUD || {}, cloudOn = !!(CC.url && CC.key), CN_KEY = "kisten-tracker-cloudname";
-  var cloudTimer = null, cloudBusy = false, cloudDirty = false, lastSig = "";
-  function getName(){ try { return localStorage.getItem(CN_KEY) || ""; } catch(e){ return ""; } }
-  function setName(n){ try { if (n) localStorage.setItem(CN_KEY, n); else localStorage.removeItem(CN_KEY); } catch(e){} }
-  function normName(v){ return String(v || "").trim().toLowerCase().replace(/\s+/g, " "); }
-  function sigNow(){ return JSON.stringify([S.base, S.rounds]); }
-  function cMsg(t, kind){ var m = $("cloudMsg"); m.textContent = t; m.className = "hint" + (kind ? " msg-" + kind : ""); }
-  function netMsg(err){
-    var m = String((err && err.message) || err);
-    if (/name_invalid/.test(m)) return "Der Name muss 3 bis 40 Zeichen lang sein.";
-    if (/too_large/.test(m)) return "Die Daten sind zu groß für die Online-Sicherung.";
-    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Keine Verbindung. Versuche es später nochmal.";
-    return "Online-Fehler: " + m;
-  }
-  async function rpc(fn, body){
-    var headers = { "Content-Type": "application/json", apikey: CC.key };
-    if (/^eyJ/.test(CC.key)) headers.Authorization = "Bearer " + CC.key;   // nur bei klassischen JWT-Schluesseln; "sb_publishable_…" nur als apikey
-    var res = await fetch(CC.url.replace(/\/+$/, "") + "/rest/v1/rpc/" + fn, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(body)
-    });
-    var txt = await res.text(), j = null;
-    try { j = txt ? JSON.parse(txt) : null; } catch(e){}
-    if (!res.ok) throw new Error((j && (j.message || j.hint)) || ("Fehler " + res.status));
-    return j;
-  }
-  function cloudSchedule(){
-    if (!cloudOn || !getName()) return;
-    if (sigNow() === lastSig) return;
-    cloudDirty = true; setStatus("cloudBusy");
-    clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudPush, 2000);
-  }
-  async function cloudPush(){
-    var name = getName(); if (!cloudOn || !name) return;
-    if (cloudBusy) { cloudTimer = setTimeout(cloudPush, 800); return; }
-    cloudBusy = true; var sig = sigNow();
-    try {
-      var ok = await rpc("kt_put", { p_name: name, p_data: packData() });
-      if (ok === false) await rpc("kt_create", { p_name: name, p_data: packData() });
-      lastSig = sig;
-      if (sigNow() !== lastSig) cloudSchedule(); else { cloudDirty = false; setStatus("cloud"); }
-    } catch(e) { setStatus("cloudErr"); clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudPush, 10000); }
-    finally { cloudBusy = false; }
-  }
-  async function cloudPull(){
-    var name = getName();
-    if (!cloudOn || !name || S.current || cloudDirty || cloudBusy) return;
-    try {
-      var o = await rpc("kt_get", { p_name: name });
-      if (!o) { lastSig = ""; cloudSchedule(); return; }
-      var ns = unpackData(o);
-      if (ns.ts > (S.ts || 0)) { S = ns; S.current = null; saveLocal(); lastSig = sigNow(); refresh(); setStatus("cloud"); }
-      else if (JSON.stringify([ns.base, ns.rounds]) === sigNow()) { lastSig = sigNow(); setStatus("cloud"); }
-      else { cloudSchedule(); }
-    } catch(e) { setStatus("cloudErr"); }
-  }
   function setMsg(t, kind){ var m = $("codeMsg"); m.textContent = t; m.className = "hint" + (kind ? " msg-" + kind : ""); }
   function backupInfo(){
     var lb = lsGet(LB_KEY), now = Date.now();
@@ -637,12 +562,6 @@
       if (document.activeElement !== inp) inp.value = S.base[inp.getAttribute("data-base")];
     });
     backupInfo();
-    var nm = getName();
-    $("cloudOff").style.display = cloudOn ? "none" : "block";
-    $("cloudOut").style.display = (cloudOn && !nm) ? "block" : "none";
-    $("cloudIn").style.display = (cloudOn && nm) ? "block" : "none";
-    $("cloudWho").textContent = nm;
-    $("cloudLoginBtn").textContent = armedDel === "cloudLogin" ? "Wirklich ersetzen?" : "Mit Namen laden";
     $("restoreBtn").textContent = armedDel === "restore" ? "Wirklich ersetzen?" : "Wiederherstellen";
     $("wipeBtn").textContent = armedDel === "wipe" ? "Wirklich löschen?" : "Alles löschen";
     $("cancelBtn").textContent = armedDel === "cancel" ? "Wirklich verwerfen?" : "Verwerfen";
@@ -733,44 +652,6 @@
       }).catch(function(err){ setMsg((err && err.message) || "Wiederherstellen fehlgeschlagen.", "bad"); refresh(); });
       return false;
     },
-    cloudCreate: function(){
-      var name = normName($("cloudName").value);
-      if (name.length < 3 || name.length > 40) { cMsg("Der Name muss 3 bis 40 Zeichen lang sein.", "bad"); return false; }
-      cMsg("Einen Moment …");
-      rpc("kt_create", { p_name: name, p_data: packData() }).then(function(ok){
-        if (ok === false) { cMsg("Der Name ist schon vergeben. Nimm einen anderen. Ist es dein eigener Name, tippe auf „Mit Namen laden“.", "bad"); return; }
-        setName(name); lastSig = sigNow(); cloudDirty = false;
-        cMsg("✓ Angelegt. Merke dir diesen Namen: " + name, "ok"); setStatus("cloud"); refresh();
-      }).catch(function(err){ cMsg(netMsg(err), "bad"); });
-      return false;
-    },
-    cloudLogin: function(){
-      var name = normName($("cloudName").value);
-      if (name.length < 3 || name.length > 40) { cMsg("Gib deinen Namen ein (3 bis 40 Zeichen).", "bad"); return false; }
-      var hasData = S.rounds.length > 0 || S.base.chests > 0 || S.base.gizmos > 0 || S.base.tokens > 0;
-      if (hasData && armedDel !== "cloudLogin") {
-        armedDel = "cloudLogin"; clearTimeout(armTimer); armTimer = setTimeout(function(){ armedDel = null; refresh(); }, 4000);
-        cMsg("Das ersetzt die Daten auf diesem Gerät. Tippe nochmal zum Bestätigen.", "bad"); refresh(); return false;
-      }
-      armedDel = null; cMsg("Einen Moment …");
-      rpc("kt_get", { p_name: name }).then(function(o){
-        if (!o) { cMsg("Diesen Namen gibt es nicht. Schreibweise prüfen oder „Name anlegen“ nutzen.", "bad"); refresh(); return; }
-        var ns = unpackData(o);
-        S = ns; S.current = null; resultShown = false; editIdx = null;
-        setName(name); lastSig = sigNow(); cloudDirty = false; commit();
-        cMsg("✓ Geladen: " + S.rounds.length + " Runden, " + (S.base.chests + sums().c) + " Kisten.", "ok"); setStatus("cloud");
-      }).catch(function(err){ cMsg(netMsg(err), "bad"); refresh(); });
-      return false;
-    },
-    cloudNow: function(){
-      lastSig = ""; clearTimeout(cloudTimer); cloudDirty = true; setStatus("cloudBusy");
-      cloudPush().then(function(){ cMsg(cloudDirty ? "Konnte nicht sichern, ich versuche es weiter." : "✓ Online gesichert.", cloudDirty ? "bad" : "ok"); });
-      return false;
-    },
-    cloudUnlink: function(){
-      setName(""); lastSig = ""; cloudDirty = false; clearTimeout(cloudTimer);
-      cMsg("Getrennt. Deine Daten bleiben auf diesem Gerät, der Online-Eintrag bleibt bestehen.", "ok"); setStatus("local"); refresh(); return false;
-    },
     nudgeGo: function(){
       var d = $("settings"); d.open = true; refresh();
       d.scrollIntoView({ behavior: "smooth", block: "start" }); act.genCode(); return false;
@@ -833,7 +714,7 @@
       if (lock && lastAct === a && now - lastActT < lock) return;
       if (counting && now - viewChangedAt < 350) return;   // Klick, der noch zum Rundenstart gehoert
       lastAct = a; lastActT = now;
-      if (a !== "cancel" && a !== "del" && a !== "edit" && a !== "rEdit" && a !== "wipe" && a !== "restore" && a !== "cloudLogin") { armedDel = null; }
+      if (a !== "cancel" && a !== "del" && a !== "edit" && a !== "rEdit" && a !== "wipe" && a !== "restore") { armedDel = null; }
       var res = act[a](el, e);
       if (res === false) return;
       commit();
@@ -863,8 +744,6 @@
 
   refresh();
   setStatus("local");
-  if (cloudOn && getName()) { setStatus("cloudBusy"); cloudPull(); }
-  document.addEventListener("visibilitychange", function(){ if (!document.hidden) cloudPull(); });
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
 })();
 </script>
