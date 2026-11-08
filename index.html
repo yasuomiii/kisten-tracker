@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kisten-Tracker</title>
 <meta name="description" content="Zählt geöffnete Truhen, Gizmos und Pirate Shop Token pro Runde - lokal im Browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sofia+Sans+Extra+Condensed:wght@900&family=Barlow+Condensed:ital,wght@1,700;1,800;1,900&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<script>
+(function(){try{if(localStorage.getItem("kisten-tracker-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();
+</script>
 <style>
   :root{
     --bg:#0b0e1c; --card:rgba(26,31,58,.86); --card2:#222850; --line:rgba(120,132,200,.22);
@@ -45,6 +51,9 @@
     color:transparent}
   .chance{margin-top:12px;font-size:13px;color:var(--muted)}
   .chance b{color:var(--blue);font-size:15px}
+  .chance small{font-size:11px;opacity:.75}
+  .chance + .chance{margin-top:8px}
+  .chance.tk b{color:var(--violet)}
   .float{animation:bob 3.4s ease-in-out infinite}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
@@ -187,13 +196,201 @@
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
   }
+  /* ===================== Fortnite-Website-Look ===================== */
+  :root{
+    --bg:#070a22; --card:rgba(14,20,76,.88); --card2:#1b2575; --line:rgba(110,150,255,.30);
+    --text:#ffffff; --muted:#a6b4ff; --gold:#ffe600; --gold2:#ffb800;
+    --green:#35f0a0; --blue:#31c7ff; --violet:#b86bff; --red:#ff4d6d;
+    --logo:"Sofia Sans Extra Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif;
+    --disp:"Barlow Condensed","Arial Narrow","Roboto Condensed",Impact,sans-serif;
+    --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  html,body{font-family:var(--body)}
+  body{background:#0e1160;position:relative}
+  body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:repeating-linear-gradient(118deg,rgba(255,255,255,.035) 0 2px,transparent 2px 16px),
+      radial-gradient(600px 380px at 90% -5%,rgba(255,230,0,.16),transparent 70%),
+      radial-gradient(520px 420px at -10% 40%,rgba(49,199,255,.24),transparent 70%),
+      radial-gradient(560px 460px at 110% 92%,rgba(184,107,255,.32),transparent 70%),
+      linear-gradient(165deg,#0a1250 0%,#16106e 50%,#34128f 100%);}
+  /* Schlagzeilen-Schrift: kursiv, Großbuchstaben, schmal */
+  h1,.hero .label,.hero .big,.sect,summary,.tile .val,.tile .lbl,.tile .add,.cta,.pill,.editbtn,
+  .resTitle h2,.rt b,.rt span,.bigtotal b,.bigtotal span,.mini b,.mini span,.kv b,.item .n,.step .sb b,.cur,.chance b{
+    font-family:var(--disp);font-style:italic;text-transform:uppercase;letter-spacing:.02em}
+  h1{font-size:29px;font-weight:900;letter-spacing:.01em;line-height:1;white-space:nowrap}
+  h1 span{color:var(--gold)}
+  .status{border-radius:2px;text-transform:uppercase;letter-spacing:.05em;font-size:10px;font-weight:700;text-align:right;line-height:1.25;padding:5px 9px;max-width:150px}
+
+  /* Karten: kantig, mit Farbbalken links */
+  .card,details{border-radius:3px;border:1px solid var(--line);
+    box-shadow:inset 5px 0 0 var(--gold),0 12px 30px rgba(0,0,0,.4)}
+  details{box-shadow:inset 5px 0 0 var(--blue),0 12px 30px rgba(0,0,0,.4)}
+  .card.hero{box-shadow:inset 0 5px 0 var(--gold),0 12px 30px rgba(0,0,0,.4);
+    background:linear-gradient(165deg,rgba(40,60,190,.85),rgba(18,14,90,.92))}
+  .card.nudge{box-shadow:inset 5px 0 0 var(--violet),0 12px 30px rgba(0,0,0,.4)}
+  .card.summary{border-color:var(--green)}
+  summary{font-size:21px;font-weight:800}
+  .sect{font-size:15px;font-weight:800;color:var(--gold);letter-spacing:.12em}
+  .hero .label{font-size:16px;font-weight:700;letter-spacing:.22em;color:var(--muted)}
+  .hero .big{font-size:96px;font-weight:900;line-height:.98;
+    background:linear-gradient(180deg,#fffbb0,#ffe600 50%,#ffb800);-webkit-background-clip:text;background-clip:text;
+    filter:drop-shadow(0 4px 0 rgba(0,0,0,.35))}
+  .mini{border-radius:3px;background:rgba(255,255,255,.08);border-bottom:4px solid var(--text)}
+  .mini:nth-child(1){border-bottom-color:var(--blue)} .mini:nth-child(2){border-bottom-color:var(--violet)}
+  .mini b{font-size:30px;font-weight:900} .mini span{font-size:13px;font-weight:700;color:var(--muted)}
+  .kv{font-weight:600} .kv b{font-size:22px;font-weight:800}
+  .chance{font-weight:600} .chance b{font-size:19px;font-weight:800}
+
+  /* Knöpfe: schräge Kanten wie auf fortnite.com */
+  .cta{border-radius:0;font-size:26px;font-weight:900;letter-spacing:.04em;padding:18px;
+    background:var(--gold);color:#0a0a30;box-shadow:none;
+    clip-path:polygon(16px 0,100% 0,calc(100% - 16px) 100%,0 100%)}
+  .cta.green{background:var(--green);color:#03291a;box-shadow:none}
+  .cta::after{background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent)}
+  .editbtn{border-radius:0;font-size:15px;font-weight:800;padding:9px 18px;background:rgba(255,255,255,.14);color:#fff;
+    clip-path:polygon(9px 0,100% 0,calc(100% - 9px) 100%,0 100%)}
+  .editbtn.on{background:var(--green);color:#03291a}
+  .ghost{font-family:var(--body);font-weight:600}
+  .del{font-family:var(--body)}
+  .pill{border-radius:0;background:var(--gold);color:#0a0a30;font-size:19px;font-weight:900;padding:7px 22px;
+    clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+  .pill i{background:#0a0a30;animation:none}
+
+  /* Runden-Ansicht */
+  .tile{border-radius:3px;border:1px solid var(--line);border-bottom:4px solid var(--blue);
+    background:linear-gradient(170deg,rgba(40,56,180,.75),rgba(16,14,84,.92))}
+  .tile.t{border-bottom-color:var(--violet)}
+  .tile.c{border-color:rgba(255,230,0,.55);border-bottom-color:var(--gold);
+    background:linear-gradient(170deg,rgba(80,60,200,.85),rgba(20,16,96,.95))}
+  .tile .val{font-size:46px;font-weight:900}
+  .tile.c .val{font-size:78px;font-weight:900;color:var(--gold);filter:drop-shadow(0 3px 0 rgba(0,0,0,.35))}
+  .tile .lbl{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.06em}
+  .tile .add{border-radius:3px;font-size:28px;font-weight:900}
+  .tile.c .add{font-size:23px}
+  .tile .sub{border-radius:3px}
+  .runtotal{font-weight:600}
+  .runtotal b{font-family:var(--disp);font-style:italic;font-size:20px}
+
+  /* Abschlussseite */
+  .resTitle h2{font-size:42px;font-weight:900;line-height:1}
+  .resTitle p{font-weight:600}
+  .rt{border-radius:3px;border-bottom:4px solid var(--gold)}
+  .rt b{font-size:48px;font-weight:900} .rt span{font-size:14px;font-weight:700;color:var(--muted)}
+  .bigtotal b{font-size:76px;font-weight:900}
+  .bigtotal span{font-size:15px;font-weight:700;letter-spacing:.18em}
+
+  /* Rest */
+  .item .n{font-size:18px;font-weight:800}
+  .editbox{border-radius:3px}
+  .setrow input,.code,.nameIn{border-radius:3px}
+  .setrow{font-weight:600}
+  .step .sb b{font-size:24px;font-weight:900}
+  .step .sb button{border-radius:3px}
+  .cur{font-weight:900}
+  /* ===================== kompakt + abgerundet ===================== */
+  body{padding:10px 12px 28px}
+  header{margin-bottom:8px}
+  h1{font-size:25px}
+  .status{border-radius:99px;font-size:10px;padding:5px 10px;max-width:160px}
+  .card,details{border-radius:20px;border:1px solid var(--line);margin-bottom:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.32)}
+  details{box-shadow:0 8px 24px rgba(0,0,0,.32)}
+  .card{padding:14px}
+  .card.hero{padding:10px 12px 10px;box-shadow:0 8px 24px rgba(0,0,0,.32);
+    background:linear-gradient(165deg,rgba(40,60,190,.85),rgba(18,14,90,.92))}
+  .card.nudge{box-shadow:0 8px 24px rgba(0,0,0,.32)}
+  .card.avgcard{padding:10px 12px}
+  summary{font-size:18px;padding:12px 0}
+  details{padding:0 16px}
+  .sect{font-size:13px}
+
+  /* Startseite */
+  #heroChest>div{width:56px!important;height:46px!important}
+  .hero .label{font-size:13px;margin-top:2px;letter-spacing:.18em}
+  .hero .big{font-size:70px;line-height:.95}
+  .grid3{margin-top:6px;gap:6px}
+  .mini{border-radius:14px;border-bottom:0;padding:6px 2px}
+  .mini b{font-size:24px;line-height:1.1} .mini span{font-size:11px}
+  .chance{margin-top:6px;font-size:13px;line-height:1.3}
+  .chance + .chance{margin-top:1px}
+  .chance b{font-size:16px} .chance small{font-size:12px;opacity:.8}
+  .cta{border-radius:16px;clip-path:none;font-size:22px;padding:12px;margin-bottom:10px;
+    box-shadow:0 6px 18px rgba(255,230,0,.25)}
+  .cta.green{box-shadow:0 6px 18px rgba(53,240,160,.25)}
+  .avgcard .sect{margin:0 0 6px}
+  .avgs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .avg{background:rgba(255,255,255,.08);border-radius:14px;padding:7px 2px;text-align:center}
+  .avg b{display:block;font-family:var(--disp);font-style:italic;font-size:25px;font-weight:900;line-height:1.1}
+  .avg span{font-family:var(--disp);font-style:italic;text-transform:uppercase;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+  .card.nudge{padding:8px 10px;font-size:12px;line-height:1.3;align-items:center;gap:8px}
+  .card.nudge .btnrow{padding:0;flex-wrap:nowrap;gap:6px;flex-shrink:0}
+  .card.nudge .editbtn{padding:7px 11px;font-size:12px}
+
+  /* Knöpfe & Felder */
+  .editbtn{clip-path:none;border-radius:99px;padding:8px 16px;font-size:14px}
+  .pill{clip-path:none;border-radius:99px;font-size:17px;padding:6px 16px}
+  .setrow input,.code,.nameIn{border-radius:12px}
+  .editbox{border-radius:14px}
+  .step .sb button{border-radius:12px}
+  .del{border-radius:10px}
+
+  /* Runden-Ansicht */
+  .topbar{margin-bottom:8px}
+  .tile{border-radius:18px;border:1px solid var(--line);padding:10px 6px 8px}
+  .tile.g{border-color:rgba(49,199,255,.45)} .tile.t{border-color:rgba(184,107,255,.5)}
+  .tile.c{border-color:rgba(255,230,0,.6)}
+  .tile .ico{width:38px;height:38px}
+  .tile.c .ico{width:84px;height:70px}
+  .tile .val{font-size:38px} .tile.c .val{font-size:64px}
+  .tile .lbl{font-size:12px;min-height:26px}
+  .tile .add{border-radius:12px;padding:10px 0;margin-top:4px;font-size:24px}
+  .tile.c .add{font-size:21px}
+  .tile .sub{border-radius:10px;padding:5px 0;margin-top:5px}
+  .runtotal{margin:10px 0;font-size:12px}
+  .runtotal b{font-size:17px}
+
+  /* Abschlussseite */
+  .resTitle{margin:0 0 8px}
+  .resTitle h2{font-size:32px;margin:2px 0 0}
+  .resTitle p{font-size:13px}
+  #resChest>div{width:58px!important;height:48px!important}
+  .tiles3{gap:8px;margin-bottom:10px}
+  .rt{border-radius:16px;border-bottom:1px solid var(--line);padding:8px 4px}
+  .rt b{font-size:34px} .rt span{font-size:12px}
+  .bigtotal{padding:0 0 4px}
+  .bigtotal b{font-size:54px} .bigtotal span{font-size:12px}
+  .kv{padding:6px 0;font-size:14px} .kv b{font-size:18px}
+  .item{padding:8px 0}
+  /* Logo-Look (freie Sofia-Sans-Schrift als Ersatz für Burbank): nur Titel, Hauptzahlen, Überschriften */
+  h1,.hero .big,.tile .val,.resTitle h2,.bigtotal b,.sect,.cta{font-family:var(--logo);font-weight:900;font-style:italic;letter-spacing:.02em}
+  h1{font-size:31px}
+  #rTotal{color:var(--gold)}
+  #rChance{color:var(--blue)}
+  /* ===================== Dark Mode (schwarz/grau) ===================== */
+  .hright{display:flex;align-items:center;gap:6px;min-width:0}
+  .themebtn{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.1);
+    color:var(--text);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;
+    transition:transform .2s,background .2s}
+  .themebtn:active{transform:scale(.88)}
+  .status{max-width:112px}
+  html[data-theme="dark"]{--bg:#0b0b0d;--card:rgba(26,26,30,.94);--card2:#2a2a2f;--line:rgba(255,255,255,.15);--muted:#a8a8b3}
+  html[data-theme="dark"] body{background:#0b0b0d}
+  html[data-theme="dark"] body::before{
+    background:repeating-linear-gradient(118deg,rgba(255,255,255,.03) 0 2px,transparent 2px 16px),
+      radial-gradient(600px 380px at 90% -5%,rgba(255,230,0,.08),transparent 70%),
+      radial-gradient(520px 420px at -10% 40%,rgba(255,255,255,.05),transparent 70%),
+      linear-gradient(165deg,#0a0a0c 0%,#161619 55%,#232328 100%)}
+  html[data-theme="dark"] .card.hero{background:linear-gradient(165deg,#303036,#17171b)}
+  html[data-theme="dark"] .tile{background:linear-gradient(170deg,#2b2b31,#141417)}
+  html[data-theme="dark"] .tile.c{background:linear-gradient(170deg,#38352a,#17161a)}
+  html[data-theme="dark"] .mini,html[data-theme="dark"] .avg{background:rgba(255,255,255,.07)}
 </style>
 </head>
 <body>
 <div id="confetti"></div>
 <div id="errBox" style="display:none;position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#ff6b7a;color:#2a0006;font:600 13px system-ui;padding:10px 12px;border-radius:12px"></div>
 <div class="wrap">
-  <header><h1>Kisten<span>-Tracker</span></h1><span id="status" class="status"></span></header>
+  <header><h1>Kisten<span>-Tracker</span></h1><div class="hright"><span id="status" class="status"></span><button id="themeBtn" class="themebtn" type="button" aria-label="Dark Mode umschalten">🌙</button></div></header>
 
   <!-- ================= HOME ================= -->
   <section id="home" class="view">
@@ -206,21 +403,24 @@
         <div class="mini"><b class="c-violet" id="hT">0</b><span>Pirate Shop Token</span></div>
         <div class="mini"><b id="hN">0</b><span>Runden</span></div>
       </div>
-      <div class="chance">🎯 Gizmo-Chance pro Kiste: <b id="hChance">0,00</b> %</div>
+      <div class="chance">🎯 Gizmo-Chance: <b id="hChance">0,00</b> % <small>· Epic: 1 zu 127</small></div>
+      <div class="chance tk">🏴‍☠️ Token-Chance bisher (≥ 1): <b id="hTChance">0,00</b> % <small>· Epic: 1 zu 137.500</small></div>
     </div>
 
     <button class="cta" data-act="start">▶&nbsp; Runde starten</button>
 
-    <div class="card">
+    <div class="card avgcard">
       <div class="sect">Durchschnitt pro Runde</div>
-      <div class="kv"><span>Kisten</span><b class="c-gold" id="hAvgC">0,0</b></div>
-      <div class="kv"><span>Gizmos</span><b class="c-blue" id="hAvgG">0,0</b></div>
-      <div class="kv"><span>Pirate Shop Token</span><b class="c-violet" id="hAvgT">0,0</b></div>
+      <div class="avgs">
+        <div class="avg"><b class="c-gold" id="hAvgC">0,0</b><span>Kisten</span></div>
+        <div class="avg"><b class="c-blue" id="hAvgG">0,0</b><span>Gizmos</span></div>
+        <div class="avg"><b class="c-violet" id="hAvgT">0,0</b><span>Token</span></div>
+      </div>
     </div>
 
     <div class="card nudge" id="nudge">
       <div>💾 <span id="nudgeTxt"></span></div>
-      <div class="btnrow"><button class="editbtn on" data-act="nudgeGo">Jetzt sichern</button><button class="editbtn" data-act="nudgeLater">Später</button></div>
+      <div class="btnrow"><button class="editbtn on" data-act="nudgeGo">Sichern</button><button class="editbtn" data-act="nudgeLater">Später</button></div>
     </div>
 
     <details id="hist">
@@ -288,7 +488,7 @@
       </div>
     </div>
 
-    <div class="runtotal">Gesamt inkl. dieser Runde: <b id="rTotal">0</b> Kisten<br>🎯 Gizmo-Chance pro Kiste: <b id="rChance">0,00</b> %</div>
+    <div class="runtotal">Gesamt inkl. dieser Runde: <b id="rTotal">0</b> Kisten<br>🎯 Gizmo-Chance pro Kiste: <b id="rChance">0,00</b> %<br>🏴‍☠️ Token-Chance bisher: <b id="rTChance" style="color:var(--violet)">0,00</b> %</div>
     <button class="cta green" data-act="end">✓&nbsp; Runde beenden</button>
   </section>
 
@@ -310,6 +510,7 @@
       <div class="kv"><span>Gizmos insgesamt</span><b class="c-blue" id="resGT">0</b></div>
       <div class="kv"><span>Pirate Shop Token insgesamt</span><b class="c-violet" id="resTT">0</b></div>
       <div class="kv"><span>Gizmo-Chance pro Kiste</span><b class="c-blue"><span id="resChance">0,00</span> %</b></div>
+      <div class="kv"><span>Token-Chance bisher (≥ 1)</span><b class="c-violet"><span id="resTChance">0,00</span> %</b></div>
       <div class="kv"><span>Ø Kisten pro Runde</span><b class="c-gold" id="resAvgC">0,0</b></div>
       <div class="kv"><span>Ø Gizmos pro Runde</span><b class="c-blue" id="resAvgG">0,0</b></div>
       <div class="kv"><span>Runden gespielt</span><b id="resRounds">0</b></div>
@@ -428,6 +629,8 @@
 
   /* ---------- derived ---------- */
   function sums(){ var c=0,g=0,t=0; S.rounds.forEach(function(r){ c+=r.chests; g+=r.gizmos; t+=r.tokens; }); return {c:c,g:g,t:t}; }
+  var TOKEN_ODDS = 137500;   // Epic: 1 zu 137.500 pro Kiste (normale Matches)
+  function tokenPct(n){ return n > 0 ? -Math.expm1(n * Math.log1p(-1 / TOKEN_ODDS)) * 100 : 0; }
   function chancePct(g, c){ return c > 0 ? g / c * 100 : 0; }
   function stats(){
     var s = sums(), cur = S.current, n = S.rounds.length;
@@ -441,7 +644,7 @@
   /* ---------- status + persistence ---------- */
   var statusEl = $("status");
   function setStatus(k){
-    var m = { ok:["✓ Gespeichert","ok"], busy:["Speichert …",""], local:["✓ Auf diesem Gerät gespeichert","ok"], err:["Speichern nicht möglich","warn"] }[k] || ["",""];
+    var m = { ok:["✓ Gespeichert","ok"], busy:["Speichert …",""], local:["✓ Lokal gespeichert","ok"], err:["Speichern nicht möglich","warn"] }[k] || ["",""];
     statusEl.textContent = m[0]; statusEl.className = "status " + m[1];
   }
   function commit(){
@@ -504,8 +707,8 @@
     var days = lb ? Math.floor((now - lb) / DAY) : null;
     $("lastBackup").textContent = lb ? "Letzte Sicherung: " + (days === 0 ? "heute" : days === 1 ? "gestern" : "vor " + days + " Tagen") : "Noch nicht gesichert.";
     var show = S.rounds.length >= 1 && (!lb || now - lb > 7 * DAY) && now > lsGet(SN_KEY);
-    $("nudge").style.display = show ? "block" : "none";
-    if (show) $("nudgeTxt").textContent = lb ? "Deine letzte Sicherung ist " + days + " Tage her." : "Du hast deine Daten noch nicht gesichert. Sie liegen nur in diesem Browser.";
+    $("nudge").style.display = show ? "flex" : "none";
+    if (show) $("nudgeTxt").textContent = lb ? "Letzte Sicherung vor " + days + " Tagen." : "Noch nicht gesichert (nur in diesem Browser).";
   }
 
   /* ---------- views ---------- */
@@ -552,10 +755,11 @@
     countTo($("hAvgC"), st.ac, 1, 700); countTo($("hAvgG"), st.ag, 1, 700); countTo($("hAvgT"), st.at, 1, 700);
     setPlain($("hCount"), st.n);
     countTo($("hChance"), chancePct(st.tg, st.tc), 2, 700);
+    countTo($("hTChance"), tokenPct(st.tc), 2, 700);
     if (cur) {
       setPlain($("rNo"), st.n + 1);
       put($("rC"), cur.chests, 0); put($("rG"), cur.gizmos, 0); put($("rT"), cur.tokens, 0);
-      put($("rTotal"), st.tc, 0); put($("rChance"), chancePct(st.tg, st.tc), 2);
+      put($("rTotal"), st.tc, 0); put($("rChance"), chancePct(st.tg, st.tc), 2); put($("rTChance"), tokenPct(st.tc), 2);
     }
     renderList();
     document.querySelectorAll("[data-base]").forEach(function(inp){
@@ -688,6 +892,7 @@
     countTo($("resAvgC"), after.ac, 1, 1100, before.ac); countTo($("resAvgG"), after.ag, 1, 1100, before.ag);
     countTo($("resRounds"), after.n, 0, 600, before.n);
     countTo($("resChance"), chancePct(after.tg, after.tc), 2, 1100, chancePct(before.tg, before.tc));
+    countTo($("resTChance"), tokenPct(after.tc), 2, 1100, tokenPct(before.tc));
     confetti(r.tokens > 0 ? 70 : 36, r.tokens > 0 ? ["#ffc83d","#b48cff","#5ab0ff","#3ddc97","#fff"] : ["#ffc83d","#ff9a1f","#ffe38a"]);
     buzz(25);
   }
@@ -745,6 +950,19 @@
   refresh();
   setStatus("local");
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+})();
+</script>
+<script>
+(function(){
+  var b=document.getElementById("themeBtn"); if(!b) return;
+  function sync(){var d=document.documentElement.getAttribute("data-theme")==="dark"; b.textContent=d?"☀️":"🌙"; b.setAttribute("aria-label",d?"Zum hellen Design wechseln":"Dark Mode einschalten");}
+  b.addEventListener("click",function(){
+    var d=document.documentElement.getAttribute("data-theme")==="dark";
+    if(d) document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme","dark");
+    try{localStorage.setItem("kisten-tracker-theme",d?"light":"dark")}catch(e){}
+    sync();
+  });
+  sync();
 })();
 </script>
 </body>
