@@ -1023,7 +1023,7 @@
       // Doppelklick-Sperre: gleiche Aktion binnen kurzer Zeit = Geisterklick, ignorieren
       var now = Date.now();
       var counting = /^(chest|gizmo|token)(Up|Down)$/.test(a);
-      var lock = counting ? 230 : (a === "rEdit" ? 0 : 500);
+      var lock = counting ? 60 : (a === "rEdit" ? 0 : 500);
       if (lock && lastAct === a && now - lastActT < lock) return;
       if (counting && now - viewChangedAt < 350) return;   // Klick, der noch zum Rundenstart gehoert
       lastAct = a; lastActT = now;
