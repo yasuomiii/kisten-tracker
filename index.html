@@ -1047,7 +1047,10 @@
     }
     var down = null;
     svg.addEventListener("pointerdown", function(ev){ down = { x:ev.clientX, moved:false }; try { svg.setPointerCapture(ev.pointerId); } catch(e){} });
-    svg.addEventListener("pointermove", function(ev){ if (!down) return; if (Math.abs(ev.clientX - down.x) > 6) down.moved = true; if (down.moved) pick(ev); });
+    svg.addEventListener("pointermove", function(ev){
+      if (ev.pointerType === "mouse") { pick(ev); if (down && Math.abs(ev.clientX - down.x) > 6) down.moved = true; return; }   // Maus: reines Darueberfahren reicht
+      if (!down) return; if (Math.abs(ev.clientX - down.x) > 6) down.moved = true; if (down.moved) pick(ev);
+    });
     var wasDrag = false;
     svg.addEventListener("pointerup", function(){ wasDrag = !!(down && down.moved); down = null; });
     svg.addEventListener("click", function(){ if (wasDrag) { wasDrag = false; return; } chartState.focus = null; chartState.sel = -1; renderChart(true); });

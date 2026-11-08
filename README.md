@@ -13,7 +13,7 @@ Es ist eine einzelne Datei (`index.html`), ohne Server, ohne Konto, ohne Install
 - **Teilen-Karte:** erzeugt ein Bild mit Gesamtzahlen und Durchschnitt zum Teilen oder Speichern.
 - **Dark Mode** (Knopf oben rechts).
 - **Token-Party:** Konfetti und Partyhorn-Sound, wenn du einen Pirate Shop Token zählst (Ton in der Runde mit dem Lautsprecher-Knopf abschaltbar).
-- **Verlauf:** ein aufklappbares Feld mit vier Diagrammen wie bei einem Aktienchart (Kisten, Gizmos, Token, Gizmo-Chance), jeweils pro Runde oder als Gesamtstand. Antippen eines Diagramms zeigt nur dieses groß, Wischen zeigt den Wert einer Runde, nochmal Tippen bringt alle vier zurück.
+- **Verlauf:** ein aufklappbares Feld mit vier Diagrammen wie bei einem Aktienchart (Kisten, Gizmos, Token, Gizmo-Chance), jeweils pro Runde oder als Gesamtstand. Antippen eines Diagramms zeigt nur dieses groß, Wischen (am PC: einfach mit der Maus darüberfahren) zeigt den Wert einer Runde, nochmal Tippen bringt alle vier zurück.
 - **Rundenliste** mit Bearbeiten (falls du etwas vergessen hast) und Löschen.
 - **Startwerte:** Zahlen, die du schon vor dem Tracking hattest.
 - **Wiederherstellungs-Code:** ein Text, mit dem du alle Daten auf jedem Gerät zurückholst.
