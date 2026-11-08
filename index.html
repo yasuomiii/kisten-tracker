@@ -384,10 +384,48 @@
   html[data-theme="dark"] .tile{background:linear-gradient(170deg,#2b2b31,#141417)}
   html[data-theme="dark"] .tile.c{background:linear-gradient(170deg,#38352a,#17161a)}
   html[data-theme="dark"] .mini,html[data-theme="dark"] .avg{background:rgba(255,255,255,.07)}
+  /* ===================== Prognose, Teilen, Details-Animation ===================== */
+  .avghead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .avgcard .avghead .sect{margin:0}
+  .sharebtn{font-size:12px !important;padding:5px 12px !important;white-space:nowrap}
+  .fcs{grid-template-columns:1fr 1fr}
+  .avg .sm{display:block;font-family:var(--body);font-style:normal;text-transform:none;font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0;line-height:1.3;margin-top:1px}
+  .avg .sm.m2{opacity:.85}
+  .fcnote{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.3;text-align:center}
+  .fccard .avg b{font-size:23px}
+  .runrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  .rbox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 10px;min-width:0}
+  .rbox .rt2{font-family:var(--disp);font-style:italic;text-transform:uppercase;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+  .rrow{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:12px;color:var(--muted);font-weight:600;padding:1px 0}
+  .rrow b{font-family:var(--disp);font-style:italic;font-size:17px;font-weight:900;color:var(--text);white-space:nowrap}
+  .fl{padding:2px 0}
+  .fl .fk{font-size:11px;color:var(--muted);font-weight:600}
+  .fl .fv{font-family:var(--disp);font-style:italic;font-weight:900;font-size:22px;line-height:1.05;white-space:nowrap}
+  .fl .fv small{display:block;font-family:var(--body);font-style:normal;font-size:10px;font-weight:600;color:var(--muted);margin-top:1px}
+  #rTotal{color:var(--gold)} #rChance{color:var(--blue)}
+  .rbox .fl{padding:3px 0}
+  .rbox .fl .fv{font-size:19px}
+  .rbox .fl .fv small{display:inline;font-size:11px;margin:0 0 0 2px}
+  .smodal{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:14px;animation:itemIn .25s ease}
+  .smodal[hidden]{display:none}
+  .sbox{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:100%}
+  .sbox img{max-width:100%;max-height:68vh;width:auto;height:auto;border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.6)}
+  .sbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .sbox .hint{color:#c8c8d4;text-align:center;padding:0}
+  details>:not(summary){animation:dIn .38s ease both}
+  @keyframes dIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+  details.closing summary::after{transform:none !important}
 </style>
 </head>
 <body>
 <div id="confetti"></div>
+<div id="shareModal" class="smodal" hidden>
+  <div class="sbox">
+    <img id="shareImg" alt="Teilen-Karte">
+    <div class="sbtns"><button class="editbtn on" id="shareSend" type="button">Teilen</button><button class="editbtn" id="shareSave" type="button">Speichern</button><button class="editbtn" id="shareClose" type="button">Schließen</button></div>
+    <div class="hint">Tipp: Das Bild lange drücken, um es zu speichern.</div>
+  </div>
+</div>
 <div id="errBox" style="display:none;position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#ff6b7a;color:#2a0006;font:600 13px system-ui;padding:10px 12px;border-radius:12px"></div>
 <div class="wrap">
   <header><h1>Kisten<span>-Tracker</span></h1><div class="hright"><span id="status" class="status"></span><button id="themeBtn" class="themebtn" type="button" aria-label="Dark Mode umschalten">🌙</button></div></header>
@@ -410,12 +448,21 @@
     <button class="cta" data-act="start">▶&nbsp; Runde starten</button>
 
     <div class="card avgcard">
-      <div class="sect">Durchschnitt pro Runde</div>
+      <div class="avghead"><div class="sect">Durchschnitt pro Runde</div><button class="editbtn on sharebtn" id="shareBtn" type="button">📤 Teilen</button></div>
       <div class="avgs">
         <div class="avg"><b class="c-gold" id="hAvgC">0,0</b><span>Kisten</span></div>
         <div class="avg"><b class="c-blue" id="hAvgG">0,0</b><span>Gizmos</span></div>
         <div class="avg"><b class="c-violet" id="hAvgT">0,0</b><span>Token</span></div>
       </div>
+    </div>
+
+    <div class="card avgcard fccard">
+      <div class="sect">Nächster Fund · Prognose</div>
+      <div class="avgs fcs">
+        <div class="avg"><span>🎯 Nächstes Gizmo</span><b class="c-blue" id="fG">–</b><span class="sm" id="fGu"></span><span class="sm m2" id="fGm"></span></div>
+        <div class="avg"><span>🏴‍☠️ Nächster Token</span><b class="c-violet" id="fT">–</b><span class="sm" id="fTu"></span><span class="sm m2" id="fTm"></span></div>
+      </div>
+      <div class="fcnote" id="fNote"></div>
     </div>
 
     <div class="card nudge" id="nudge">
@@ -488,7 +535,19 @@
       </div>
     </div>
 
-    <div class="runtotal">Gesamt inkl. dieser Runde: <b id="rTotal">0</b> Kisten<br>🎯 Gizmo-Chance pro Kiste: <b id="rChance">0,00</b> %<br>🏴‍☠️ Token-Chance bisher: <b id="rTChance" style="color:var(--violet)">0,00</b> %</div>
+    <div class="runrow">
+      <div class="rbox">
+        <div class="rt2">Diese Zahlen</div>
+        <div class="rrow"><span>Kisten gesamt</span><b id="rTotal">0</b></div>
+        <div class="rrow"><span>🎯 Gizmo-Chance</span><b><span id="rChance">0,00</span> %</b></div>
+        <div class="rrow"><span>🏴‍☠️ Token-Chance</span><b style="color:var(--violet)"><span id="rTChance">0,00</span> %</b></div>
+      </div>
+      <div class="rbox">
+        <div class="rt2">Prognose</div>
+        <div class="fl"><div class="fk">🎯 Nächstes Gizmo</div><div class="fv c-blue"><span id="rfG">–</span> <small>Kisten</small></div></div>
+        <div class="fl"><div class="fk">🏴‍☠️ Nächster Token</div><div class="fv c-violet"><span id="rfT">–</span> <small>Kisten</small></div></div>
+      </div>
+    </div>
     <button class="cta green" data-act="end">✓&nbsp; Runde beenden</button>
   </section>
 
@@ -538,7 +597,8 @@
   function normalize(d){
     d = clone(d || {}); var b = d.base || {};   // tiefe Kopie: Daten aus dem Speicher sind schreibgeschuetzt
     return { base:{ chests:num(b.chests,0), gizmos:num(b.gizmos,0), tokens:num(b.tokens,0) },
-             rounds: Array.isArray(d.rounds) ? d.rounds : [], current: d.current || null, ts: num(d.ts,0) };
+             rounds: Array.isArray(d.rounds) ? d.rounds : [], current: d.current || null, ts: num(d.ts,0),
+             since: d.since ? { g:num(d.since.g,0), t:num(d.since.t,0) } : undefined };
   }
   function loadLocal(){ try { var r = localStorage.getItem(LS_KEY); return r ? normalize(JSON.parse(r)) : null; } catch(e){ return null; } }
   function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(S)); return true; } catch(e){ return false; } }
@@ -631,6 +691,32 @@
   function sums(){ var c=0,g=0,t=0; S.rounds.forEach(function(r){ c+=r.chests; g+=r.gizmos; t+=r.tokens; }); return {c:c,g:g,t:t}; }
   var TOKEN_ODDS = 137500;   // Epic: 1 zu 137.500 pro Kiste (normale Matches)
   function tokenPct(n){ return n > 0 ? -Math.expm1(n * Math.log1p(-1 / TOKEN_ODDS)) * 100 : 0; }
+  var GIZMO_ODDS = 127;
+  function fmtN(v){ return Math.round(v).toLocaleString("de-DE"); }
+  function fmtR(v){ return v < 10 ? v.toFixed(1).replace(".", ",") : fmtN(v); }
+  function nextEst(p, ac){
+    var e = 1 / p, med = p >= 1 ? 0 : Math.LN2 / -Math.log1p(-p);
+    return { e:e, med:med, r: ac > 0 ? e / ac : null, rm: ac > 0 ? med / ac : null };
+  }
+  function gizmoP(st){ return (st.tc >= 200 && st.tg > 0) ? st.tg / st.tc : 1 / GIZMO_ODDS; }
+  function sinceNow(st){
+    var cur = S.current;
+    if (cur && cur.sg != null) return { g:cur.sg, t:cur.st };
+    return S.since || { g:0, t:(st.tt === 0 ? st.tc : 0) };
+  }
+  function renderForecast(st){
+    var g = nextEst(gizmoP(st), st.ac), t = nextEst(1 / TOKEN_ODDS, st.ac), sn = sinceNow(st);
+    var gr = Math.max(0, g.e - sn.g), tr = Math.max(0, t.e - sn.t);
+    function setTxt(id, v){ var el = $(id); if (el && el.textContent !== v) el.textContent = v; }
+    var val = function(rem){ return rem < 0.5 ? "fällig!" : "~" + fmtN(rem); };
+    var ru = function(rem, ac){ return ac <= 0 ? "Runden: erst nach einer Runde" : (rem < 0.5 ? "jetzt dran" : "≈ " + fmtR(rem / ac) + " Runden"); };
+    var md = function(o){ return "50 %: spätestens ~" + fmtN(o.med) + " Kisten"; };
+    setTxt("fG", val(gr)); setTxt("fGu", "Kisten · " + ru(gr, st.ac)); setTxt("fGm", md(g));
+    setTxt("fT", val(tr)); setTxt("fTu", "Kisten · " + ru(tr, st.ac)); setTxt("fTm", md(t));
+    setTxt("fNote", "Zählt mit jeder Kiste runter, nach einem Fund geht es neu los · Gizmo " + (st.tc >= 200 && st.tg > 0 ? "nach deiner Quote" : "nach Epic (1 zu 127)") + ", Token nach Epic (1 zu 137.500)");
+    setTxt("rfG", val(gr));
+    setTxt("rfT", val(tr));
+  }
   function chancePct(g, c){ return c > 0 ? g / c * 100 : 0; }
   function stats(){
     var s = sums(), cur = S.current, n = S.rounds.length;
@@ -640,6 +726,8 @@
       tt: S.base.tokens + s.t + (cur ? cur.tokens : 0),
       ac: n ? s.c / n : 0, ag: n ? s.g / n : 0, at: n ? s.t / n : 0 };
   }
+
+  window.__kt = { stats: function(){ var st = stats(); st.chance = chancePct(st.tg, st.tc); st.tchance = tokenPct(st.tc); return st; } };
 
   /* ---------- status + persistence ---------- */
   var statusEl = $("status");
@@ -761,6 +849,7 @@
       put($("rC"), cur.chests, 0); put($("rG"), cur.gizmos, 0); put($("rT"), cur.tokens, 0);
       put($("rTotal"), st.tc, 0); put($("rChance"), chancePct(st.tg, st.tc), 2); put($("rTChance"), tokenPct(st.tc), 2);
     }
+    renderForecast(st);
     renderList();
     document.querySelectorAll("[data-base]").forEach(function(inp){
       if (document.activeElement !== inp) inp.value = S.base[inp.getAttribute("data-base")];
@@ -780,16 +869,16 @@
     burst(t, e, text, color, anim ? 10 : 7);
   }
   var act = {
-    start: function(){ S.current = { chests:0, gizmos:0, tokens:0, startedAt:Date.now() }; resultShown = false; buzz(15); },
+    start: function(){ var sn = sinceNow(stats()); S.current = { chests:0, gizmos:0, tokens:0, sg:sn.g, st:sn.t, startedAt:Date.now() }; resultShown = false; buzz(15); },
     chestUp: function(el, e){
-      S.current.chests++;
+      S.current.chests++; S.current.sg = (S.current.sg || 0) + 1; S.current.st = (S.current.st || 0) + 1;
       var c = document.querySelector("#icoC .chest"); c.classList.add("open"); setTimeout(function(){ c.classList.remove("open"); }, 170);
       fx("tileC", "rC", e, "+1", "#ffc83d", true);
     },
-    chestDown: function(){ if (S.current.chests > 0) { S.current.chests--; pop($("rC")); } else { replay($("tileC"), "shake", 260); return false; } },
-    gizmoUp: function(el, e){ S.current.gizmos++; replay(document.querySelector("#icoG .gear"), "spin", 600); fx("tileG", "rG", e, "+1", "#5ab0ff"); },
+    chestDown: function(){ if (S.current.chests > 0) { S.current.chests--; S.current.sg = Math.max(0, (S.current.sg || 0) - 1); S.current.st = Math.max(0, (S.current.st || 0) - 1); pop($("rC")); } else { replay($("tileC"), "shake", 260); return false; } },
+    gizmoUp: function(el, e){ S.current.gizmos++; S.current.sg = 0; replay(document.querySelector("#icoG .gear"), "spin", 600); fx("tileG", "rG", e, "+1", "#5ab0ff"); },
     gizmoDown: function(){ if (S.current.gizmos > 0) { S.current.gizmos--; pop($("rG")); } else { replay($("tileG"), "shake", 260); return false; } },
-    tokenUp: function(el, e){ S.current.tokens++; replay(document.querySelector("#icoT .coin"), "flip", 650); fx("tileT", "rT", e, "+1", "#b48cff", true);
+    tokenUp: function(el, e){ S.current.tokens++; S.current.st = 0; replay(document.querySelector("#icoT .coin"), "flip", 650); fx("tileT", "rT", e, "+1", "#b48cff", true);
       confetti(26, ["#b48cff", "#ffc83d", "#ffffff", "#5ab0ff"]); buzz(30); },
     tokenDown: function(){ if (S.current.tokens > 0) { S.current.tokens--; pop($("rT")); } else { replay($("tileT"), "shake", 260); return false; } },
     cancel: function(){
@@ -800,7 +889,7 @@
       if (!S.current) return false;
       var before = stats();
       var r = { chests:S.current.chests, gizmos:S.current.gizmos, tokens:S.current.tokens, at:Date.now() };
-      S.rounds.push(r); S.current = null; newestIdx = S.rounds.length - 1;
+      S.since = { g: S.current.sg || 0, t: S.current.st || 0 }; S.rounds.push(r); S.current = null; newestIdx = S.rounds.length - 1;
       resultShown = true;
       var after = stats();
       try { syncView(); } catch(err) { report(err); }
@@ -963,6 +1052,123 @@
     sync();
   });
   sync();
+})();
+</script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  /* ---- Details sanft auf- und zuklappen ---- */
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll("details").forEach(function(d){
+    var sm = d.querySelector("summary"), anim = null;
+    sm.addEventListener("click", function(e){
+      e.preventDefault();
+      if (reduce || !d.animate) { d.open = !d.open; return; }
+      if (anim) { anim.cancel(); anim = null; }
+      var start = d.offsetHeight, opening = !d.open, end;
+      d.style.overflow = "hidden";
+      if (opening) { d.open = true; end = d.offsetHeight; }
+      else { d.classList.add("closing"); end = sm.offsetHeight + (d.offsetHeight - d.clientHeight); }
+      anim = d.animate({ height:[start + "px", end + "px"] }, { duration:340, easing:"cubic-bezier(.2,.8,.2,1)" });
+      var done = function(){
+        if (!opening) d.open = false;
+        d.classList.remove("closing"); d.style.overflow = ""; d.style.height = ""; anim = null;
+      };
+      anim.onfinish = done;
+      anim.oncancel = function(){ d.classList.remove("closing"); d.style.overflow = ""; d.style.height = ""; };
+    });
+  });
+
+  /* ---- Teilen-Karte (Bild) ---- */
+  var shareBlob = null, shareUrl = null;
+  function rr(x, a, b, w, h, r){ x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
+  function fN(v){ return Math.round(v).toLocaleString("de-DE"); }
+  function f1(v){ return v.toFixed(1).replace(".", ","); }
+  function f2(v){ return v.toFixed(2).replace(".", ","); }
+  function drawCard(){
+    var dark = document.documentElement.getAttribute("data-theme") === "dark";
+    var S_ = window.__kt && window.__kt.stats ? window.__kt.stats() : null; if (!S_) return null;
+    var W = 1080, H = 1150, c = document.createElement("canvas"); c.width = W; c.height = H;
+    var x = c.getContext("2d");
+    var LOGO = '"Sofia Sans Extra Condensed","Barlow Condensed","Arial Narrow",Impact,sans-serif', DISP = '"Barlow Condensed","Arial Narrow",sans-serif', BODY = '"Barlow",system-ui,sans-serif';
+    var gold = "#ffe600", blue = dark ? "#5ab0ff" : "#31c7ff", violet = dark ? "#b48cff" : "#b86bff", muted = dark ? "#a8a8b3" : "#a6b4ff";
+    var g = x.createLinearGradient(0, 0, W * .6, H);
+    if (dark) { g.addColorStop(0, "#0a0a0c"); g.addColorStop(.55, "#18181b"); g.addColorStop(1, "#26262b"); }
+    else { g.addColorStop(0, "#0a1250"); g.addColorStop(.5, "#16106e"); g.addColorStop(1, "#34128f"); }
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.save(); x.globalAlpha = .05; x.strokeStyle = "#fff"; x.lineWidth = 3;
+    for (var i = -H; i < W + H; i += 36) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i - H * .5, H); x.stroke(); }
+    x.restore();
+    var gl = x.createRadialGradient(W, 0, 0, W, 0, 620); gl.addColorStop(0, "rgba(255,230,0,.22)"); gl.addColorStop(1, "rgba(255,230,0,0)");
+    x.fillStyle = gl; x.fillRect(0, 0, W, H);
+    function T(txt, px, py, font, col, al, ls){ x.font = font; x.fillStyle = col; x.textAlign = al || "left"; x.textBaseline = "alphabetic"; try { x.letterSpacing = ls || "0px"; } catch(e){} x.fillText(txt, px, py); }
+    function box(px, py, w, h, r, fill, line){ rr(x, px, py, w, h, r); x.fillStyle = fill; x.fill(); if (line) { x.strokeStyle = line; x.lineWidth = 2; x.stroke(); } }
+    var panel = dark ? "rgba(30,30,34,.9)" : "rgba(14,20,76,.85)", inner = "rgba(255,255,255,.08)", line = "rgba(255,255,255,.16)";
+
+    // Titel
+    x.font = "italic 900 124px " + LOGO; try { x.letterSpacing = "2px"; } catch(e){}
+    var w1 = x.measureText("KISTEN").width, w2 = x.measureText("-TRACKER").width, sx = (W - w1 - w2) / 2;
+    T("KISTEN", sx, 150, "italic 900 124px " + LOGO, "#fff", "left", "2px");
+    T("-TRACKER", sx + w1, 150, "italic 900 124px " + LOGO, gold, "left", "2px");
+
+    // Hauptkarte
+    box(50, 195, 980, 560, 36, panel, line);
+    T("KISTEN INSGESAMT GEÖFFNET", W / 2, 275, "italic 800 40px " + DISP, muted, "center", "8px");
+    var bg = x.createLinearGradient(0, 300, 0, 520); bg.addColorStop(0, "#fffbb0"); bg.addColorStop(.5, gold); bg.addColorStop(1, "#ffb800");
+    T(fN(S_.tc), W / 2, 520, "italic 900 300px " + LOGO, bg, "center", "2px");
+    var bw = 290, gap = 25, bx = 50 + (980 - 3 * bw - 2 * gap) / 2, by = 575;
+    [[S_.tg, "GIZMOS", blue], [S_.tt, "PIRATE SHOP TOKEN", violet], [S_.n, "RUNDEN", "#fff"]].forEach(function(it, k){
+      var px = bx + k * (bw + gap); box(px, by, bw, 150, 24, inner);
+      T(fN(it[0]), px + bw / 2, by + 90, "italic 900 84px " + LOGO, it[2], "center", "1px");
+      T(it[1], px + bw / 2, by + 132, "italic 800 28px " + DISP, muted, "center", "3px");
+    });
+
+    // Durchschnitt
+    box(50, 785, 980, 270, 36, panel, line);
+    T("DURCHSCHNITT PRO RUNDE", 90, 850, "italic 900 44px " + LOGO, gold, "left", "5px");
+    var aw = 290, ax = 50 + (980 - 3 * aw - 2 * gap) / 2;
+    [[S_.ac, "KISTEN", gold], [S_.ag, "GIZMOS", blue], [S_.at, "TOKEN", violet]].forEach(function(it, k){
+      var px = ax + k * (aw + gap); box(px, 875, aw, 150, 24, inner);
+      T(f1(it[0]), px + aw / 2, 960, "italic 900 84px " + LOGO, it[2], "center", "1px");
+      T(it[1], px + aw / 2, 1002, "italic 800 28px " + DISP, muted, "center", "3px");
+    });
+
+    var d = new Date(); var ds = ("0" + d.getDate()).slice(-2) + "." + ("0" + (d.getMonth() + 1)).slice(-2) + "." + d.getFullYear();
+    T("Stand " + ds + " · Fan-Projekt, nicht mit Epic Games verbunden", W / 2, 1110, "600 26px " + BODY, muted, "center");
+    return c;
+  }
+  function openShare(){
+    var fonts = document.fonts && document.fonts.load ? Promise.race([
+      Promise.all([document.fonts.load('900 100px "Sofia Sans Extra Condensed"'), document.fonts.load('italic 800 40px "Barlow Condensed"'), document.fonts.load('600 30px "Barlow"')]),
+      new Promise(function(r){ setTimeout(r, 1500); })
+    ]) : Promise.resolve();
+    fonts.catch(function(){}).then(function(){
+      var c = drawCard(); if (!c) return;
+      c.toBlob(function(b){
+        if (!b) return;
+        if (shareUrl) URL.revokeObjectURL(shareUrl);
+        shareBlob = b; shareUrl = URL.createObjectURL(b);
+        $("shareImg").src = shareUrl;
+        $("shareSend").style.display = (navigator.share) ? "" : "none";
+        $("shareModal").hidden = false;
+      }, "image/png");
+    });
+  }
+  function closeShare(){ $("shareModal").hidden = true; }
+  $("shareBtn").addEventListener("click", openShare);
+  $("shareClose").addEventListener("click", closeShare);
+  $("shareModal").addEventListener("click", function(e){ if (e.target === $("shareModal")) closeShare(); });
+  $("shareSave").addEventListener("click", function(){
+    if (!shareUrl) return;
+    var a = document.createElement("a"); a.href = shareUrl; a.download = "kisten-tracker.png"; document.body.appendChild(a); a.click(); a.remove();
+  });
+  $("shareSend").addEventListener("click", function(){
+    if (!shareBlob || !navigator.share) return;
+    var file = new File([shareBlob], "kisten-tracker.png", { type:"image/png" });
+    var data = { files:[file], title:"Mein Kisten-Tracker" };
+    if (navigator.canShare && !navigator.canShare(data)) data = { title:"Mein Kisten-Tracker", text:"Meine Kisten-Statistik" };
+    navigator.share(data).catch(function(){});
+  });
 })();
 </script>
 </body>
