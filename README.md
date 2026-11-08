@@ -8,7 +8,12 @@ Es ist eine einzelne Datei (`index.html`), ohne Server, ohne Konto, ohne Install
 
 - **Runden:** Runde starten, Kisten per Tippen zählen, Gizmos und Pirate Shop Token mit + zählen, Runde beenden.
 - **Abschlussseite** mit den Zahlen der Runde und dem neuen Gesamtstand.
-- **Statistik:** Kisten, Gizmos und Token insgesamt, Ø pro Runde und Gizmo-Chance pro Kiste in %.
+- **Statistik:** Kisten, Gizmos und Token insgesamt, Ø pro Runde, Gizmo-Chance pro Kiste in % und die Wahrscheinlichkeit, bis jetzt mindestens einen Pirate Shop Token gefunden zu haben.
+- **Prognose:** ein Countdown, der mit jeder geöffneten Kiste runterzählt, bis du voraussichtlich dein nächstes Gizmo und deinen nächsten Pirate Shop Token bekommst (nach einem Fund geht er neu los) (Gizmo nach deiner eigenen Quote, Token nach Epics 1 zu 137.500). Das ist ein Erwartungswert, kein Versprechen.
+- **Teilen-Karte:** erzeugt ein Bild mit Gesamtzahlen und Durchschnitt zum Teilen oder Speichern.
+- **Dark Mode** (Knopf oben rechts).
+- **Token-Party:** Konfetti und Partyhorn-Sound, wenn du einen Pirate Shop Token zählst (Ton in der Runde mit dem Lautsprecher-Knopf abschaltbar).
+- **Verlauf:** ein aufklappbares Feld mit vier Diagrammen wie bei einem Aktienchart (Kisten, Gizmos, Token, Gizmo-Chance), jeweils pro Runde oder als Gesamtstand. Antippen eines Diagramms zeigt nur dieses groß, Wischen zeigt den Wert einer Runde, nochmal Tippen bringt alle vier zurück.
 - **Rundenliste** mit Bearbeiten (falls du etwas vergessen hast) und Löschen.
 - **Startwerte:** Zahlen, die du schon vor dem Tracking hattest.
 - **Wiederherstellungs-Code:** ein Text, mit dem du alle Daten auf jedem Gerät zurückholst.
@@ -50,6 +55,8 @@ Es gibt keinen Server und kein Konto. Die Daten verlassen dein Gerät nur, wenn 
 
 ## Hinweise
 
+- Die **Token-Chance** rechnet mit Epics Angabe von 1 zu 137.500 pro Kiste (normale Matches, Stand 8. November 2026) und allen gezählten Kisten, auch den Startwerten. In Treasure Hours ist die Chance höher, das berücksichtigt die Seite nicht. Zählst du auch Kisten von vor der Season mit, ist die Zahl zu hoch. Die Zahl steht oben in `index.html` als `TOKEN_ODDS`, falls Epic sie ändert.
 - Die **Gizmo-Chance** ist Gizmos geteilt durch Kisten. Gizmos kommen auch aus Quests und anderen Quellen, nicht nur aus Truhen. Zählst du alle mit, fällt die Chance höher aus als für Truhen allein.
 - Das Zählen ist bewusst manuell. Automatisches Auslesen des Spiels ist nicht erlaubt und kann zur Kontosperre führen.
+- Die Schriften (Sofia Sans Extra Condensed, Barlow und Barlow Condensed, alle freie Lizenz; Sofia Sans Extra Condensed ersetzt die kostenpflichtige Fortnite-Schrift Burbank) werden beim Öffnen von Google Fonts geladen. Ohne Internet nutzt die Seite ersatzweise eine Systemschrift. Wer das nicht möchte, kann die beiden `<link>`-Zeilen mit `fonts.googleapis.com` im Kopf von `index.html` entfernen.
 - Fan-Projekt, nicht mit Epic Games verbunden. Fortnite ist eine Marke von Epic Games.

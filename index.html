@@ -416,6 +416,39 @@
   @keyframes dIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
   details.closing summary::after{transform:none !important}
   .tbr{display:flex;align-items:center;gap:8px}
+  /* ===================== Verlaufs-Diagramm ===================== */
+  .chartwrap{padding:0 0 12px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .chip{font:700 12px var(--body);color:var(--muted);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:10px;padding:6px 11px;cursor:pointer;transition:background .2s,color .2s,transform .15s}
+  .chip:active{transform:scale(.94)}
+  .chip.on{color:#0a0a30;border-color:transparent;background:rgba(255,255,255,.9)}
+  .chgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .chmini{font:inherit;color:inherit;text-align:left;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:14px;padding:8px 8px 4px;cursor:pointer;transition:transform .15s,background .2s;min-width:0}
+  .chmini:active{transform:scale(.97)}
+  .chmini .mh{display:flex;justify-content:space-between;align-items:baseline;gap:4px}
+  .chmini .mt{font-family:var(--disp);font-style:italic;text-transform:uppercase;font-size:12px;font-weight:800;letter-spacing:.05em}
+  .chmini .mv{font-family:var(--disp);font-style:italic;font-size:19px;font-weight:900}
+  .chmini .ms{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:2px}
+  .chmini svg{width:100%;height:auto;display:block}
+  .chbigh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .chtitle{font-family:var(--disp);font-style:italic;text-transform:uppercase;font-size:18px;font-weight:900;letter-spacing:.04em}
+  .chback{font-size:10px;color:var(--muted);font-weight:600}
+  .chinfo{font-size:13px;font-weight:600;min-height:20px;margin:2px 0 4px}
+  .chinfo b{font-family:var(--disp);font-style:italic;font-size:19px;font-weight:900}
+  #chSvg{width:100%;height:auto;display:block;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:pointer}
+  .chart-svg .grid,#chSvg .grid{stroke:var(--line);stroke-width:1;stroke-dasharray:3 4}
+  .chart-svg .ax,#chSvg .ax{fill:var(--muted);font:600 10px var(--body)}
+  .chart-svg .avgl,#chSvg .avgl{stroke:var(--muted);stroke-width:1;stroke-dasharray:5 4;opacity:.7}
+  .chart-svg .cline,#chSvg .cline{fill:none;stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}
+  .chart-svg.mini .cline{stroke-width:2}
+  .chart-svg .cline.anim,#chSvg .cline.anim{stroke-dasharray:1;stroke-dashoffset:1;animation:chDraw 1s ease forwards}
+  @keyframes chDraw{to{stroke-dashoffset:0}}
+  .chart-svg .carea,#chSvg .carea{opacity:.9}
+  #chSvg .guide{stroke:var(--muted);stroke-width:1;opacity:.6}
+  .chart-svg .dot{stroke:var(--card2);stroke-width:1.5}
+  .chempty{padding:18px 4px;text-align:center;color:var(--muted);font-size:13px}
+  .chempty[hidden],#chBig[hidden]{display:none}
+  .chnote{font-size:10px;color:var(--muted);margin-top:4px}
 </style>
 </head>
 <body>
@@ -474,6 +507,23 @@
     <details id="hist">
       <summary><span>Runden (<span id="hCount">0</span>)</span></summary>
       <div class="list" id="hList"></div>
+    </details>
+
+    <details id="chart">
+      <summary>Verlauf</summary>
+      <div class="chartwrap">
+        <div class="chips" id="chMode">
+          <button type="button" class="chip on" data-md="r">Pro Runde</button><button type="button" class="chip" data-md="s">Gesamt</button>
+        </div>
+        <div class="chempty" id="chEmpty" hidden>Noch zu wenig Daten. Beende ein paar Runden, dann erscheint hier der Verlauf.</div>
+        <div class="chgrid" id="chGrid"></div>
+        <div id="chBig" hidden>
+          <div class="chbigh"><span id="chTitle" class="chtitle"></span><span class="chback">Tippen: zurück zu allen</span></div>
+          <div class="chinfo" id="chInfo"></div>
+          <svg id="chSvg" viewBox="0 0 340 180" role="img" aria-label="Verlaufsdiagramm"></svg>
+          <div class="chnote" id="chNote"></div>
+        </div>
+      </div>
     </details>
 
     <details id="settings">
@@ -597,9 +647,17 @@
   function num(v, fb){ v = Number(v); return isFinite(v) ? v : fb; }
   function normalize(d){
     d = clone(d || {}); var b = d.base || {};   // tiefe Kopie: Daten aus dem Speicher sind schreibgeschuetzt
-    return { base:{ chests:num(b.chests,0), gizmos:num(b.gizmos,0), tokens:num(b.tokens,0) },
-             rounds: Array.isArray(d.rounds) ? d.rounds : [], current: d.current || null, ts: num(d.ts,0),
-             since: d.since ? { g:num(d.since.g,0), t:num(d.since.t,0) } : undefined };
+    var pos = function(v){ return Math.max(0, Math.floor(num(v, 0))); };
+    var rounds = (Array.isArray(d.rounds) ? d.rounds : []).filter(function(r){ return r && typeof r === "object"; }).map(function(r){
+      var o = { chests:pos(r.chests), gizmos:pos(r.gizmos), tokens:pos(r.tokens), at:num(r.at, 0) };
+      if (r.edited) o.edited = true; return o;
+    });
+    var c = d.current && typeof d.current === "object" ? d.current : null;
+    var current = c ? { chests:pos(c.chests), gizmos:pos(c.gizmos), tokens:pos(c.tokens), startedAt:num(c.startedAt, Date.now()) } : null;
+    if (current && c.sg != null) { current.sg = pos(c.sg); current.st = pos(c.st); }
+    return { base:{ chests:pos(b.chests), gizmos:pos(b.gizmos), tokens:pos(b.tokens) },
+             rounds: rounds, current: current, ts: num(d.ts,0),
+             since: d.since ? { g:pos(d.since.g), t:pos(d.since.t) } : undefined };
   }
   function loadLocal(){ try { var r = localStorage.getItem(LS_KEY); return r ? normalize(JSON.parse(r)) : null; } catch(e){ return null; } }
   function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(S)); return true; } catch(e){ return false; } }
@@ -774,7 +832,7 @@
   }
   function chk(str){ var h = 2166136261; for (var i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619) >>> 0; return h.toString(36); }
   async function pipe(bytes, stream){
-    var w = stream.writable.getWriter(); w.write(bytes); w.close();
+    var w = stream.writable.getWriter(); w.write(bytes).catch(function(){}); w.close().catch(function(){});
     return new Uint8Array(await new Response(stream.readable).arrayBuffer());
   }
   async function makeCode(){
@@ -870,6 +928,7 @@
     }
     renderForecast(st);
     renderList();
+    renderChart(false);
     document.querySelectorAll("[data-base]").forEach(function(inp){
       if (document.activeElement !== inp) inp.value = S.base[inp.getAttribute("data-base")];
     });
@@ -881,6 +940,126 @@
     syncView();
   }
 
+  /* ---------- Verlaufs-Diagramm ---------- */
+  var chartState = { md:"r", focus:null, sel:-1 }, chartPts = [];
+  var CHM = { c:{ lbl:"Kisten", col:"var(--gold)", cls:"c-gold" }, g:{ lbl:"Gizmos", col:"var(--blue)", cls:"c-blue" },
+              t:{ lbl:"Token", col:"var(--violet)", cls:"c-violet" }, p:{ lbl:"Gizmo-Chance", col:"var(--green)", cls:"c-green" } };
+  function chartData(m, md){
+    var R = S.rounds, off = Math.max(0, R.length - 30), pts = [];
+    var key = { c:"chests", g:"gizmos", t:"tokens" }[m];
+    var cum = { chests:S.base.chests, gizmos:S.base.gizmos, tokens:S.base.tokens };
+    for (var i = 0; i < off; i++) { cum.chests += R[i].chests; cum.gizmos += R[i].gizmos; cum.tokens += R[i].tokens; }
+    var val = function(){ return m === "p" ? chancePct(cum.gizmos, cum.chests) : cum[key]; };
+    if ((m === "p" || md === "s") && off === 0 && (m === "p" ? cum.chests > 0 : cum[key] > 0)) pts.push({ n:"Start", v:val() });
+    for (var j = off; j < R.length; j++) {
+      cum.chests += R[j].chests; cum.gizmos += R[j].gizmos; cum.tokens += R[j].tokens;
+      pts.push({ n:"#" + (j + 1), r:j + 1, v: (m !== "p" && md === "r") ? R[j][key] : val() });
+    }
+    return { pts:pts, off:off, m:m, md:(m === "p" ? "s" : md) };
+  }
+  function chFmt(v, m){ return m === "p" ? v.toFixed(2).replace(".", ",") + " %" : fmtN(v); }
+  function chInfoText(d, i){
+    var p = d.pts[i], M = CHM[d.m];
+    var when = p.n === "Start" ? "Start" : (d.md === "r" ? "Runde " + p.r : "Nach Runde " + p.r);
+    var what = d.m === "p" ? "" : (d.md === "r" ? M.lbl : M.lbl + " insgesamt");
+    return when + ": <b class=\"" + M.cls + "\">" + chFmt(p.v, d.m) + "</b> " + what;
+  }
+  function chRange(d){
+    var vals = d.pts.map(function(p){ return p.v; }), lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    if (d.md === "r" && d.m !== "p") { lo = 0; hi = Math.max(1, Math.ceil(hi / 2)) * 2; }
+    else {
+      var span = hi - lo;
+      if (d.m === "p") { if (span < 0.2) { var c0 = (hi + lo) / 2; lo = c0 - 0.1; hi = c0 + 0.1; } else { lo -= span * .1; hi += span * .1; } lo = Math.max(0, lo); }
+      else { if (span < 2) { hi = lo + 2; } else { var pad = Math.ceil(span * .08); lo = Math.max(0, lo - pad); hi += pad; } }
+    }
+    return { lo:lo, hi:hi, vals:vals };
+  }
+  /* Zeichnet ein Diagramm; big = grosse Ansicht mit Achsen, sonst Mini-Ansicht */
+  function chDraw(d, big, anim, sel){
+    var M = CHM[d.m], r = chRange(d), lo = r.lo, hi = r.hi, n = d.pts.length;
+    var W = big ? 340 : 160, H = big ? 180 : 70, L = big ? 36 : 4, R = big ? 10 : 4, T = big ? 12 : 6, B = big ? 26 : 6;
+    var x0 = L, x1 = W - R, y0 = H - B, y1 = T;
+    var X = function(i){ return x0 + (x1 - x0) * i / (n - 1); }, Y = function(v){ return y0 - (y0 - y1) * (v - lo) / (hi - lo); };
+    var q = d.pts.map(function(p, i){ return { x:X(i), y:Y(p.v) }; });
+    var gid = "chG_" + d.m + (big ? "b" : "m");
+    var h = '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:' + M.col + ';stop-opacity:.38"/><stop offset="1" style="stop-color:' + M.col + ';stop-opacity:0"/></linearGradient></defs>';
+    if (big) {
+      for (var t = 0; t < 3; t++) {
+        var tv = lo + (hi - lo) * t / 2, ty = Y(tv);
+        h += '<line class="grid" x1="' + x0 + '" x2="' + x1 + '" y1="' + ty + '" y2="' + ty + '"/><text class="ax" x="' + (x0 - 5) + '" y="' + (ty + 3.5) + '" text-anchor="end">' + (d.m === "p" ? tv.toFixed(1).replace(".", ",") : fmtN(tv)) + '</text>';
+      }
+    } else {
+      h += '<line class="grid" x1="' + x0 + '" x2="' + x1 + '" y1="' + y0 + '" y2="' + y0 + '"/>';
+    }
+    var path = q.map(function(c, i){ return (i ? "L" : "M") + c.x.toFixed(1) + " " + c.y.toFixed(1); }).join(" ");
+    h += '<path class="carea" d="' + path + ' L' + x1 + " " + y0 + ' L' + x0 + " " + y0 + ' Z" fill="url(#' + gid + ')"/>';
+    if (d.md === "r" && d.m !== "p") {
+      var avg = r.vals.reduce(function(a, b){ return a + b; }, 0) / n, ay = Y(avg);
+      h += '<line class="avgl" x1="' + x0 + '" x2="' + x1 + '" y1="' + ay + '" y2="' + ay + '"/>';
+      if (big) h += '<text class="ax" x="' + x1 + '" y="' + (ay - 4) + '" text-anchor="end">Ø ' + fmtDec(avg, 1) + '</text>';
+    }
+    h += '<path class="cline' + (anim ? " anim" : "") + '" pathLength="1" d="' + path + '" style="stroke:' + M.col + '"/>';
+    if (big) {
+      [0, Math.floor((n - 1) / 2), n - 1].forEach(function(i, k){ if (n >= 3 || k !== 1) h += '<text class="ax" x="' + X(i) + '" y="' + (H - 8) + '" text-anchor="' + (k === 0 ? "start" : k === 2 ? "end" : "middle") + '">' + d.pts[i].n + '</text>'; });
+      var sq = q[sel];
+      h += '<line class="guide" x1="' + sq.x + '" x2="' + sq.x + '" y1="' + y1 + '" y2="' + y0 + '"/><circle class="dot" cx="' + sq.x + '" cy="' + sq.y + '" r="5" style="fill:' + M.col + '"/>';
+    } else {
+      h += '<circle class="dot" cx="' + q[n - 1].x + '" cy="' + q[n - 1].y + '" r="3.2" style="fill:' + M.col + '"/>';
+    }
+    return { svg:h, q:q };
+  }
+  function renderChart(anim){
+    var grid = $("chGrid"); if (!grid) return;
+    var base = chartData("c", chartState.md), enough = base.pts.length >= 2;
+    document.querySelectorAll("#chMode .chip").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-md") === chartState.md); });
+    $("chEmpty").hidden = enough;
+    if (!enough) { grid.style.display = "none"; $("chBig").hidden = true; $("chMode").style.display = "none"; chartPts = []; return; }
+    var f = chartState.focus;
+    $("chMode").style.display = f === "p" ? "none" : "flex";
+    if (!f) {
+      $("chBig").hidden = true; grid.style.display = "";
+      var h = "";
+      ["c", "g", "t", "p"].forEach(function(m){
+        var d = chartData(m, chartState.md), M = CHM[m], last = d.pts[d.pts.length - 1].v;
+        var cap = m === "p" ? "Gesamtverlauf" : (d.md === "r" ? "letzte Runde" : "gesamt");
+        h += '<button type="button" class="chmini" data-m="' + m + '" aria-label="' + M.lbl + ' groß anzeigen"><div class="mh"><span class="mt ' + M.cls + '">' + M.lbl + '</span><b class="mv ' + M.cls + '">' + chFmt(last, m) + '</b></div><div class="ms">' + cap + '</div>' +
+             '<svg class="chart-svg mini" viewBox="0 0 160 70" aria-hidden="true">' + chDraw(d, false, anim).svg + '</svg></button>';
+      });
+      grid.innerHTML = h; chartPts = [];
+    } else {
+      grid.style.display = "none"; $("chBig").hidden = false;
+      var dd = chartData(f, chartState.md), n = dd.pts.length;
+      if (chartState.sel < 0 || chartState.sel >= n) chartState.sel = n - 1;
+      var res = chDraw(dd, true, anim, chartState.sel); chartPts = res.q;
+      var svg = $("chSvg"); svg.setAttribute("class", "chart-svg"); svg.innerHTML = res.svg;
+      $("chTitle").textContent = CHM[f].lbl; $("chTitle").className = "chtitle " + CHM[f].cls;
+      $("chInfo").innerHTML = chInfoText(dd, chartState.sel);
+      $("chNote").textContent = (f === "p" ? "Die Gizmo-Chance zeigt immer den Gesamtverlauf. " : "") + (dd.off > 0 ? "Gezeigt: die letzten 30 Runden." : "");
+    }
+  }
+  (function(){
+    var svg = $("chSvg"); if (!svg) return;
+    function pick(ev){
+      if (!chartPts.length) return;
+      var r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * 340, best = 0, bd = 1e9;
+      chartPts.forEach(function(q, i){ var dd = Math.abs(q.x - px); if (dd < bd) { bd = dd; best = i; } });
+      if (best !== chartState.sel) { chartState.sel = best; renderChart(false); }
+    }
+    var down = null;
+    svg.addEventListener("pointerdown", function(ev){ down = { x:ev.clientX, moved:false }; try { svg.setPointerCapture(ev.pointerId); } catch(e){} });
+    svg.addEventListener("pointermove", function(ev){ if (!down) return; if (Math.abs(ev.clientX - down.x) > 6) down.moved = true; if (down.moved) pick(ev); });
+    var wasDrag = false;
+    svg.addEventListener("pointerup", function(){ wasDrag = !!(down && down.moved); down = null; });
+    svg.addEventListener("click", function(){ if (wasDrag) { wasDrag = false; return; } chartState.focus = null; chartState.sel = -1; renderChart(true); });
+    svg.addEventListener("pointercancel", function(){ down = null; });
+    $("chGrid").addEventListener("click", function(ev){
+      var b = ev.target.closest ? ev.target.closest(".chmini") : null; if (!b) return;
+      chartState.focus = b.getAttribute("data-m"); chartState.sel = -1; renderChart(true);
+    });
+    document.querySelectorAll("#chMode .chip").forEach(function(b){ b.addEventListener("click", function(){ chartState.md = b.getAttribute("data-md"); chartState.sel = -1; renderChart(true); }); });
+    $("chart").querySelector("summary").addEventListener("click", function(){ if (!$("chart").open) setTimeout(function(){ renderChart(true); }, 0); });
+  })();
+
   /* ---------- actions ---------- */
   function fx(tileId, valId, e, text, color, anim){
     pop($(valId)); buzz(10);
@@ -888,7 +1067,7 @@
     burst(t, e, text, color, anim ? 10 : 7);
   }
   var act = {
-    start: function(){ var sn = sinceNow(stats()); S.current = { chests:0, gizmos:0, tokens:0, sg:sn.g, st:sn.t, startedAt:Date.now() }; resultShown = false; buzz(15); },
+    start: function(){ if (S.current) return false; var sn = sinceNow(stats()); S.current = { chests:0, gizmos:0, tokens:0, sg:sn.g, st:sn.t, startedAt:Date.now() }; resultShown = false; buzz(15); },
     chestUp: function(el, e){
       S.current.chests++; S.current.sg = (S.current.sg || 0) + 1; S.current.st = (S.current.st || 0) + 1;
       var c = document.querySelector("#icoC .chest"); c.classList.add("open"); setTimeout(function(){ c.classList.remove("open"); }, 170);
@@ -1025,6 +1204,7 @@
       var counting = /^(chest|gizmo|token)(Up|Down)$/.test(a);
       var lock = counting ? 60 : (a === "rEdit" ? 0 : 500);
       if (lock && lastAct === a && now - lastActT < lock) return;
+      if (counting && !S.current) return;   // keine Runde aktiv (z. B. Tipp waehrend des Beendens)
       if (counting && now - viewChangedAt < 350) return;   // Klick, der noch zum Rundenstart gehoert
       lastAct = a; lastActT = now;
       if (a !== "cancel" && a !== "del" && a !== "edit" && a !== "rEdit" && a !== "wipe" && a !== "restore") { armedDel = null; }
@@ -1079,22 +1259,22 @@
   /* ---- Details sanft auf- und zuklappen ---- */
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   document.querySelectorAll("details").forEach(function(d){
-    var sm = d.querySelector("summary"), anim = null;
+    var sm = d.querySelector("summary"), anim = null, closing = false;
+    function reset(){ d.classList.remove("closing"); d.style.overflow = ""; d.style.height = ""; }
     sm.addEventListener("click", function(e){
       e.preventDefault();
       if (reduce || !d.animate) { d.open = !d.open; return; }
-      if (anim) { anim.cancel(); anim = null; }
-      var start = d.offsetHeight, opening = !d.open, end;
+      var start = d.offsetHeight, opening;
+      if (anim) { opening = closing; anim.oncancel = null; anim.cancel(); anim = null; reset(); }   // mitten in der Animation: Richtung umkehren
+      else opening = !d.open;
+      var end;
       d.style.overflow = "hidden";
-      if (opening) { d.open = true; end = d.offsetHeight; }
+      if (opening) { d.open = true; d.classList.remove("closing"); end = d.offsetHeight; }
       else { d.classList.add("closing"); end = sm.offsetHeight + (d.offsetHeight - d.clientHeight); }
-      anim = d.animate({ height:[start + "px", end + "px"] }, { duration:340, easing:"cubic-bezier(.2,.8,.2,1)" });
-      var done = function(){
-        if (!opening) d.open = false;
-        d.classList.remove("closing"); d.style.overflow = ""; d.style.height = ""; anim = null;
-      };
-      anim.onfinish = done;
-      anim.oncancel = function(){ d.classList.remove("closing"); d.style.overflow = ""; d.style.height = ""; };
+      closing = !opening;
+      var a = d.animate({ height:[start + "px", end + "px"] }, { duration:340, easing:"cubic-bezier(.2,.8,.2,1)" });
+      anim = a;
+      a.onfinish = function(){ if (anim !== a) return; if (!opening) d.open = false; reset(); anim = null; closing = false; };
     });
   });
 
@@ -1176,6 +1356,7 @@
   function closeShare(){ $("shareModal").hidden = true; }
   $("shareBtn").addEventListener("click", openShare);
   $("shareClose").addEventListener("click", closeShare);
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && !$("shareModal").hidden) closeShare(); });
   $("shareModal").addEventListener("click", function(e){ if (e.target === $("shareModal")) closeShare(); });
   $("shareSave").addEventListener("click", function(){
     if (!shareUrl) return;
